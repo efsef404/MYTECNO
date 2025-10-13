@@ -1,59 +1,50 @@
-import React from 'react';
-import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip } from '@mui/material';
-import type { ApplicationData } from '../App';
+import React, { useState, useEffect } from 'react';
+import { Box, Typography } from '@mui/material';
+import ApplicationList from '../components/ApplicationList';
+import type { ApplicationData } from '../pages/ApplicationPage'; // 型定義をインポート
 
-interface ManagementPageProps {
-  applications: ApplicationData[];
-}
+function ManagementPage() {
+  const [applications, setApplications] = useState<ApplicationData[]>([]);
+  const [error, setError] = useState('');
 
-const getStatusChipColor = (status: ApplicationData['status']) => {
-  switch (status) {
-    case '承認':
-      return 'success';
-    case '否認':
-      return 'error';
-    case '申請中':
-      return 'warning';
-    default:
-      return 'default';
-  }
-};
+  // APIから全申請一覧を取得する関数
+  const fetchAllApplications = async () => {
+    setError('');
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3001/api/admin/applications', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
 
-function ManagementPage({ applications }: ManagementPageProps) {
+      if (!response.ok) {
+        throw new Error('全申請一覧の取得に失敗しました。');
+      }
+
+      const data: ApplicationData[] = await response.json();
+      // 日付のフォーマットを整える
+      const formattedData = data.map(app => ({...app, date: new Date(app.date).toLocaleDateString()}));
+      setApplications(formattedData);
+
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  // コンポーネントのマウント時に全申請一覧を取得
+  useEffect(() => {
+    fetchAllApplications();
+  }, []);
+
   return (
-    <Paper sx={{ p: 4 }}>
+    <Box>
       <Typography variant="h4" gutterBottom>
         申請管理
       </Typography>
-      {applications.length === 0 ? (
-        <Typography>申請履歴はありません。</Typography>
-      ) : (
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>ID</TableCell>
-                <TableCell>申請日</TableCell>
-                <TableCell>理由</TableCell>
-                <TableCell align="right">ステータス</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {applications.map((app) => (
-                <TableRow key={app.id}>
-                  <TableCell>{app.id}</TableCell>
-                  <TableCell>{app.date}</TableCell>
-                  <TableCell>{app.reason}</TableCell>
-                  <TableCell align="right">
-                    <Chip label={app.status} color={getStatusChipColor(app.status)} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-    </Paper>
+      {error && <p style={{ color: 'red' }}>{error}</p>} 
+      <ApplicationList applications={applications} />
+    </Box>
   );
 }
 

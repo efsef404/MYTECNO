@@ -1,68 +1,82 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, CssBaseline, Box } from '@mui/material';
 import Header from './components/Header';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode';
 
-// Page Components (will be created next)
+// Page Components
 import LoginPage from './pages/LoginPage';
 import ApplicationPage from './pages/ApplicationPage';
 import ApprovalPage from './pages/ApprovalPage';
 import ManagementPage from './pages/ManagementPage';
 
-// 申請データの型定義
-export interface ApplicationData {
+interface DecodedToken {
   id: number;
-  date: string;
-  reason: string;
-  status: '承認' | '否認' | '申請中';
+  username: string;
+  role: string;
+  iat: number;
+  exp: number;
 }
 
 function App() {
-  // アプリケーションの状態を管理するためのダミーデータ
-  const [applications, setApplications] = useState<ApplicationData[]>([
-    { id: 1, date: '2025-10-10', reason: '私用のため', status: '承認' },
-    { id: 2, date: '2025-10-11', reason: '体調不良', status: '申請中' },
-  ]);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
-  // 新しい申請を追加する関数
-  const addApplication = (reason: string, date: string) => {
-    setApplications(prev => [
-      ...prev,
-      {
-        id: prev.length + 1,
-        date,
-        reason,
-        status: '申請中',
-      },
-    ]);
+  // アプリケーションの初回読み込み時にトークンをチェック
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const decodedToken: DecodedToken = jwtDecode(token);
+        // トークンの有効期限をチェック
+        if (decodedToken.exp * 1000 > Date.now()) {
+          setIsLoggedIn(true);
+          setUserRole(decodedToken.role);
+        } else {
+          // 有効期限切れのトークンは削除
+          localStorage.removeItem('token');
+        }
+      } catch (error) {
+        console.error('Invalid token:', error);
+        localStorage.removeItem('token');
+      }
+    }
+  }, []);
+
+  const handleLogin = () => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      const decodedToken: DecodedToken = jwtDecode(token);
+      setIsLoggedIn(true);
+      setUserRole(decodedToken.role);
+    }
   };
 
-  // 申請のステータスを更新する関数
-  const updateApplicationStatus = (id: number, newStatus: ApplicationData['status']) => {
-    setApplications(prev =>
-      prev.map(app => (app.id === id ? { ...app, status: newStatus } : app))
-    );
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    setIsLoggedIn(false);
+    setUserRole(null);
   };
 
   return (
     <Router>
       <CssBaseline />
-      <Header /> {/* Header is outside Routes to be always visible */}
+      <Header isLoggedIn={isLoggedIn} handleLogout={handleLogout} userRole={userRole} />
       <Container maxWidth="lg">
         <Box sx={{ my: 4 }}>
           <Routes>
-            <Route path="/" element={<LoginPage />} />
+            <Route path="/" element={!isLoggedIn ? <LoginPage handleLogin={handleLogin} /> : <Navigate to="/apply" />} />
             <Route
               path="/apply"
-              element={<ApplicationPage addApplication={addApplication} applications={applications} />}
+              element={isLoggedIn ? <ApplicationPage /> : <Navigate to="/" />}
             />
             <Route
               path="/approve"
-              element={<ApprovalPage applications={applications} updateApplicationStatus={updateApplicationStatus} />}
+              element={isLoggedIn && userRole === 'admin' ? <ApprovalPage /> : <Navigate to="/apply" />}
             />
             <Route
               path="/manage"
-              element={<ManagementPage applications={applications} />} 
+              element={isLoggedIn && userRole === 'admin' ? <ManagementPage /> : <Navigate to="/apply" />}
             />
           </Routes>
         </Box>
@@ -72,3 +86,4 @@ function App() {
 }
 
 export default App;
+

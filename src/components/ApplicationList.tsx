@@ -10,7 +10,7 @@ import {
   Typography,
   Chip,
 } from '@mui/material';
-import type { ApplicationData } from '../App'; // 型定義をインポート
+import type { ApplicationData } from '../pages/ApplicationPage'; // 型定義をインポート
 
 interface ApplicationListProps {
   applications: ApplicationData[];

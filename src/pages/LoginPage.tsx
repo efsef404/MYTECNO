@@ -2,23 +2,46 @@ import React from 'react';
 import { Box, Typography, TextField, Button, Paper } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 
-function LoginPage() {
+interface LoginPageProps {
+  handleLogin: () => void;
+}
+
+function LoginPage({ handleLogin }: LoginPageProps) {
   const navigate = useNavigate();
   const [username, setUsername] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const onLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    // ダミーのログインロジック
-    if (username === 'user' && password === 'password') {
-      navigate('/apply'); // ログイン成功後、申請ページへリダイレクト
-    } else if (username === 'admin' && password === 'admin') {
-      navigate('/manage'); // 管理者ログイン成功後、管理ページへリダイレクト
-    } else {
-      setError('ユーザー名またはパスワードが間違っています。');
+    try {
+      const response = await fetch('http://localhost:3001/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'ログインに失敗しました。');
+      }
+
+      // JWTトークンを保存
+      localStorage.setItem('token', data.token);
+
+      // Appコンポーネントのログイン状態を更新
+      handleLogin();
+
+      // ログイン後は申請ページへ
+      navigate('/apply');
+
+    } catch (err: any) {
+      setError(err.message);
     }
   };
 
@@ -28,7 +51,7 @@ function LoginPage() {
         <Typography variant="h4" component="h1" gutterBottom align="center">
           ログイン
         </Typography>
-        <form onSubmit={handleLogin}>
+        <form onSubmit={onLogin}>
           <TextField
             label="ユーザー名"
             variant="outlined"
