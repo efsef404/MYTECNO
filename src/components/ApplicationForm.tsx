@@ -4,23 +4,23 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs, { Dayjs } from 'dayjs';
 
 interface ApplicationFormProps {
-  addApplication: (reason: string, date: string) => void;
+  addApplication: (reason: string, requestedDate: string) => void;
 }
 
 function ApplicationForm({ addApplication }: ApplicationFormProps) {
   const [reason, setReason] = useState('');
-  const [date, setDate] = useState<Dayjs | null>(dayjs());
+  const [requestedDate, setRequestedDate] = useState<Dayjs | null>(dayjs()); // dateをrequestedDateに変更
   const [error, setError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!reason.trim() || !date) {
-      setError('日付と理由を両方入力してください。');
+    if (!reason.trim() || !requestedDate) { // dateをrequestedDateに変更
+      setError('申請希望日と理由を両方入力してください。'); // エラーメッセージも変更
       return;
     }
-    addApplication(reason, date.format('YYYY-MM-DD'));
+    addApplication(reason, requestedDate.format('YYYY-MM-DD')); // dateをrequestedDateに変更
     setReason('');
-    setDate(dayjs());
+    setRequestedDate(dayjs()); // dateをrequestedDateに変更
     setError('');
   };
 
@@ -32,9 +32,9 @@ function ApplicationForm({ addApplication }: ApplicationFormProps) {
       <form onSubmit={handleSubmit}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <DatePicker
-            label="日付"
-            value={date}
-            onChange={(newValue) => setDate(newValue)}
+            label="申請希望日" // ラベルを変更
+            value={requestedDate} // valueをrequestedDateに変更
+            onChange={(newValue) => setRequestedDate(newValue)} // onChangeをrequestedDateに変更
             sx={{ maxWidth: '250px' }}
           />
           <TextField

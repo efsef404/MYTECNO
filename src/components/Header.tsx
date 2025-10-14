@@ -24,9 +24,6 @@ function Header({ isLoggedIn, handleLogout, userRole }: HeaderProps) {
             </Button>
             {userRole === 'admin' && (
               <>
-                <Button color="inherit" component={Link} to="/approve">
-                  承認
-                </Button>
                 <Button color="inherit" component={Link} to="/manage">
                   管理
                 </Button>

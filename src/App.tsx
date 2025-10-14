@@ -7,7 +7,7 @@ import { jwtDecode } from 'jwt-decode';
 // Page Components
 import LoginPage from './pages/LoginPage';
 import ApplicationPage from './pages/ApplicationPage';
-import ApprovalPage from './pages/ApprovalPage';
+// import ApprovalPage from './pages/ApprovalPage'; // ApprovalPageは削除されたためインポートも削除
 import ManagementPage from './pages/ManagementPage';
 
 interface DecodedToken {
@@ -71,10 +71,6 @@ function App() {
               element={isLoggedIn ? <ApplicationPage /> : <Navigate to="/" />}
             />
             <Route
-              path="/approve"
-              element={isLoggedIn && userRole === 'admin' ? <ApprovalPage /> : <Navigate to="/apply" />}
-            />
-            <Route
               path="/manage"
               element={isLoggedIn && userRole === 'admin' ? <ManagementPage /> : <Navigate to="/apply" />}
             />
@@ -86,4 +82,3 @@ function App() {
 }
 
 export default App;
-

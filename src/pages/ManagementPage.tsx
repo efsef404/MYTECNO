@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, TextField, Button, Paper, Select, MenuItem, InputLabel, FormControl, Pagination, Modal } from '@mui/material';
+import { Box, Typography, TextField, Button, Paper, Select, MenuItem, InputLabel, FormControl, Pagination, Modal, Tabs, Tab } from '@mui/material';
 import ApplicationList from '../components/ApplicationList';
 import type { ApplicationData } from '../pages/ApplicationPage'; // 型定義をインポート
 import AddIcon from '@mui/icons-material/Add';
+import dayjs from 'dayjs'; // dayjsをインポート
 
 function ManagementPage() {
   const [applications, setApplications] = useState<ApplicationData[]>([]);
@@ -10,6 +11,9 @@ function ManagementPage() {
   const [page, setPage] = useState(1); // 現在のページ
   const [totalCount, setTotalCount] = useState(0); // 総件数
   const limit = 10; // 1ページあたりの表示件数
+
+  // タブ選択用のステート
+  const [selectedTab, setSelectedTab] = useState<'pending' | 'processed'>('pending'); // 'pending' (申請中) または 'processed' (承認済み/否認)
 
   // ユーザー登録フォーム用のステート
   const [newUsername, setNewUsername] = useState('');
@@ -32,11 +36,20 @@ function ManagementPage() {
   };
 
   // APIから全申請一覧を取得する関数
-  const fetchAllApplications = async (fetchPage: number) => {
+  const fetchAllApplications = async (fetchPage: number, statusFilter?: 'pending' | 'processed') => {
     setError('');
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3001/api/admin/applications?page=${fetchPage}&limit=${limit}`, {
+      let apiUrl = `http://localhost:3001/api/admin/applications?page=${fetchPage}&limit=${limit}`;
+      if (statusFilter === 'pending') {
+        apiUrl += '&status=pending';
+      } else if (statusFilter === 'processed') {
+        apiUrl += '&status=processed';
+      } else if (statusFilter === 'all') {
+        // 'all' の場合はフィルタリングしない
+      }
+
+      const response = await fetch(apiUrl, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -51,7 +64,9 @@ function ManagementPage() {
       const formattedData = fetchedApplications.map((app: ApplicationData) => ({
         ...app,
         date: new Date(app.date).toLocaleDateString(),
-        processedAt: app.processedAt ? new Date(app.processedAt).toLocaleDateString() : null,
+        applicationDate: app.applicationDate ? dayjs(app.applicationDate).format('MM/DD') : '',
+        requestedDate: app.requestedDate ? dayjs(app.requestedDate).format('MM/DD') : '',
+        processedAt: app.processedAt ? dayjs(app.processedAt).format('MM/DD') : null,
       }));
       setApplications(formattedData);
       setTotalCount(fetchedTotalCount);
@@ -105,12 +120,38 @@ function ManagementPage() {
     setPage(value);
   };
 
-  // コンポーネントのマウント時とページ変更時に全申請一覧を取得
+  // コンポーネントのマウント時とページ変更時、タブ変更時に全申請一覧を取得
   useEffect(() => {
-    fetchAllApplications(page);
-  }, [page]); // pageが変更されたら再取得
+    fetchAllApplications(page, selectedTab);
+  }, [page, selectedTab]); // pageまたはselectedTabが変更されたら再取得
 
   const pageCount = Math.ceil(totalCount / limit);
+
+  // 申請ステータスを更新する関数 (ApprovalPage.tsxからコピー)
+  const updateApplicationStatus = async (id: number, newStatus: ApplicationData['status']) => {
+    setError('');
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:3001/api/applications/${id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ newStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error('申請ステータスの更新に失敗しました。');
+      }
+
+      // 成功したら申請一覧を再取得して画面を更新
+      fetchAllApplications(page, selectedTab); // selectedTabも渡す
+
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
 
   return (
     <Box>
@@ -182,8 +223,18 @@ function ManagementPage() {
         </Paper>
       </Modal>
 
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs value={selectedTab} onChange={(event, newValue) => {
+          setSelectedTab(newValue);
+          setPage(1); // タブ切り替え時にページを1に戻す
+        }} aria-label="application status tabs">
+          <Tab label="申請中" value="pending" />
+          <Tab label="承認済み / 否認" value="processed" />
+        </Tabs>
+      </Box>
+
       {error && <p style={{ color: 'red' }}>{error}</p>} 
-      <ApplicationList applications={applications} />
+      <ApplicationList applications={applications} updateApplicationStatus={updateApplicationStatus} selectedTab={selectedTab} /> {/* propsを追加 */}
       {pageCount > 1 && (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3, gap: 2 }}>
           <Typography>

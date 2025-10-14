@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Box, Pagination } from '@mui/material'; // Paginationをインポート
 import ApplicationForm from '../components/ApplicationForm';
 import ApplicationList from '../components/ApplicationList';
+import dayjs from 'dayjs'; // dayjsをインポート
 
 // APIから受け取る申請データの型を定義
 export interface ApplicationData {
   id: number;
   username: string;
-  date: string;
+  applicationDate: string; // 申請日を追加
+  requestedDate: string; // 申請希望日
   reason: string;
   status: '承認' | '否認' | '申請中';
   approverUsername: string | null; // 追加
@@ -40,8 +42,11 @@ function ApplicationPage() {
       // 日付のフォーマットを整える
       const formattedData = fetchedApplications.map((app: ApplicationData) => ({
         ...app,
-        date: new Date(app.date).toLocaleDateString(),
-        processedAt: app.processedAt ? new Date(app.processedAt).toLocaleDateString() : null,
+        // Dateオブジェクトとして返されることを想定し、直接toLocaleDateStringを呼び出す
+        // nullやundefinedの場合に備えてチェックを追加
+        applicationDate: app.applicationDate ? dayjs(app.applicationDate).format('MM/DD') : '',
+        requestedDate: app.requestedDate ? dayjs(app.requestedDate).format('MM/DD') : '',
+        processedAt: app.processedAt ? dayjs(app.processedAt).format('MM/DD') : null,
       }));
       setApplications(formattedData);
       setTotalCount(fetchedTotalCount);
@@ -52,17 +57,19 @@ function ApplicationPage() {
   };
 
   // 新しい申請を追加する関数
-  const addApplication = async (reason: string, date: string) => {
+  const addApplication = async (reason: string, requestedDate: string) => {
     setError('');
     try {
       const token = localStorage.getItem('token');
+      const applicationDate = new Date().toISOString().split('T')[0]; // 当日の日付をYYYY-MM-DD形式で取得
+
       const response = await fetch('http://localhost:3001/api/applications', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ reason, date }),
+        body: JSON.stringify({ reason, applicationDate, requestedDate }), // 申請日と申請希望日を送信
       });
 
       if (!response.ok) {
