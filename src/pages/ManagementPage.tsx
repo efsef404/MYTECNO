@@ -64,9 +64,9 @@ function ManagementPage() {
       const formattedData = fetchedApplications.map((app: ApplicationData) => ({
         ...app,
         date: new Date(app.date).toLocaleDateString(),
-        applicationDate: app.applicationDate ? dayjs(app.applicationDate).format('MM/DD') : '',
+        applicationDate: app.applicationDate ? dayjs(app.applicationDate).format('MM/DD HH:mm') : '',
         requestedDate: app.requestedDate ? dayjs(app.requestedDate).format('MM/DD') : '',
-        processedAt: app.processedAt ? dayjs(app.processedAt).format('MM/DD') : null,
+        processedAt: app.processedAt ? dayjs(app.processedAt).format('MM/DD HH:mm') : null,
       }));
       setApplications(formattedData);
       setTotalCount(fetchedTotalCount);

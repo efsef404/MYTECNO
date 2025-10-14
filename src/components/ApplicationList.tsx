@@ -59,12 +59,12 @@ function ApplicationList({ applications, updateApplicationStatus, selectedTab }:
                 key={app.id}
                 sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
               >
-                <TableCell component="th" scope="row">{app.applicationDate}</TableCell> {/* 新しく追加された申請日を表示 */}
-                <TableCell>{app.requestedDate}</TableCell> {/* 申請希望日を表示 */}
+                <TableCell component="th" scope="row">{app.applicationDate ? dayjs(app.applicationDate).format('MM/DD HH:mm') : '-'}</TableCell> {/* 新しく追加された申請日を表示 */}
+                <TableCell>{app.requestedDate ? dayjs(app.requestedDate).format('MM/DD') : '-'}</TableCell> {/* 申請希望日を表示 */}
                 <TableCell>{app.username}</TableCell>
                 <TableCell>{app.reason}</TableCell>
                 <TableCell><Chip label={app.status} color={getStatusChipColor(app.status)} /></TableCell>
-                <TableCell>{app.processedAt ? dayjs(app.processedAt).format('MM/DD') : '-'}</TableCell>
+                <TableCell>{app.processedAt ? dayjs(app.processedAt).format('MM/DD HH:mm') : '-'}</TableCell>
                 {selectedTab === 'pending' && app.status === '申請中' && updateApplicationStatus && (
                   <TableCell align="right">
                     <Button

@@ -104,7 +104,10 @@ app.get('/api/applications/my', authenticateToken, async (req: AuthRequest, res:
       return res.sendStatus(401);
     }
 
-    // Pagination variables are temporarily removed for debugging.
+    // ページネーションの変数をクエリパラメータから取得
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const offset = (page - 1) * limit;
 
     connection = await mysql.createConnection(dbConfig);
 
@@ -118,6 +121,7 @@ app.get('/api/applications/my', authenticateToken, async (req: AuthRequest, res:
       LEFT JOIN users approver ON a.approver_id = approver.id
       WHERE a.user_id = ?
       ORDER BY processedAt DESC, a.application_date DESC
+      LIMIT ${limit} OFFSET ${offset}
     `;
     console.log('My dataQuery:', dataQuery); // デバッグ用ログ
     console.log('My queryParams:', [user.id]); // デバッグ用ログ
@@ -168,6 +172,7 @@ app.post('/api/applications', authenticateToken, async (req: AuthRequest, res: R
     const [rows]:[any[], any] = await connection.execute('SELECT id, user_id, application_date, requested_date, reason, status_id FROM applications WHERE id = ?', [newApplicationId]);
 
     await connection.end();
+    console.log('Create Application API Response:', rows[0]); // デバッグ用ログ
     res.status(201).json(rows[0]);
   } catch (error) {
     console.error('Create Application API Error:', error);

@@ -18,7 +18,7 @@ function ApplicationForm({ addApplication }: ApplicationFormProps) {
       setError('申請希望日と理由を両方入力してください。'); // エラーメッセージも変更
       return;
     }
-    addApplication(reason, requestedDate.format('YYYY-MM-DD')); // dateをrequestedDateに変更
+    addApplication(reason, requestedDate.format('YYYY-MM-DDTHH:mm:ss')); // 時間情報も含めて送信
     setReason('');
     setRequestedDate(dayjs()); // dateをrequestedDateに変更
     setError('');
@@ -35,6 +35,7 @@ function ApplicationForm({ addApplication }: ApplicationFormProps) {
             label="申請希望日" // ラベルを変更
             value={requestedDate} // valueをrequestedDateに変更
             onChange={(newValue) => setRequestedDate(newValue)} // onChangeをrequestedDateに変更
+            minDate={dayjs()} // 当日より前の日付を選択できないようにする
             sx={{ maxWidth: '250px' }}
           />
           <TextField

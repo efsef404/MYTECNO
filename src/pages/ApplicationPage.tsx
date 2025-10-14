@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Pagination } from '@mui/material'; // Paginationをインポート
+import { Box, Pagination, Typography } from '@mui/material'; // Pagination, Typographyをインポート
 import ApplicationForm from '../components/ApplicationForm';
 import ApplicationList from '../components/ApplicationList';
 import dayjs from 'dayjs'; // dayjsをインポート
@@ -21,14 +21,14 @@ function ApplicationPage() {
   const [error, setError] = useState('');
   const [page, setPage] = useState(1); // 現在のページ
   const [totalCount, setTotalCount] = useState(0); // 総件数
-  const limit = 5; // 1ページあたりの表示件数
+  const limit = 10; // 1ページあたりの表示件数 (管理画面と合わせる)
 
   // APIから申請一覧を取得する関数
-  const fetchApplications = async () => {
+  const fetchApplications = async (fetchPage: number) => {
     setError('');
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3001/api/applications/my?page=${page}&limit=${limit}`, {
+      const response = await fetch(`http://localhost:3001/api/applications/my?page=${fetchPage}&limit=${limit}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -42,11 +42,9 @@ function ApplicationPage() {
       // 日付のフォーマットを整える
       const formattedData = fetchedApplications.map((app: ApplicationData) => ({
         ...app,
-        // Dateオブジェクトとして返されることを想定し、直接toLocaleDateStringを呼び出す
-        // nullやundefinedの場合に備えてチェックを追加
-        applicationDate: app.applicationDate ? dayjs(app.applicationDate).format('MM/DD') : '',
+        applicationDate: app.applicationDate ? dayjs(app.applicationDate).format('MM/DD HH:mm') : '',
         requestedDate: app.requestedDate ? dayjs(app.requestedDate).format('MM/DD') : '',
-        processedAt: app.processedAt ? dayjs(app.processedAt).format('MM/DD') : null,
+        processedAt: app.processedAt ? dayjs(app.processedAt).format('MM/DD HH:mm') : null,
       }));
       setApplications(formattedData);
       setTotalCount(fetchedTotalCount);
@@ -61,7 +59,7 @@ function ApplicationPage() {
     setError('');
     try {
       const token = localStorage.getItem('token');
-      const applicationDate = new Date().toISOString().split('T')[0]; // 当日の日付をYYYY-MM-DD形式で取得
+      const applicationDate = dayjs().format('YYYY-MM-DD HH:mm:ss'); // MySQLのDATETIME形式にフォーマット
 
       const response = await fetch('http://localhost:3001/api/applications', {
         method: 'POST',
@@ -79,7 +77,7 @@ function ApplicationPage() {
       // 成功したら申請一覧を再取得して画面を更新
       // ページ1に戻って最新の申請を表示
       if (page === 1) {
-        fetchApplications();
+        fetchApplications(page);
       } else {
         setPage(1);
       }
@@ -96,7 +94,7 @@ function ApplicationPage() {
 
   // コンポーネントのマウント時とページ変更時に申請一覧を取得
   useEffect(() => {
-    fetchApplications();
+    fetchApplications(page);
   }, [page]); // pageが変更されたら再取得
 
   const pageCount = Math.ceil(totalCount / limit);
@@ -108,7 +106,10 @@ function ApplicationPage() {
       <Box sx={{ mt: 5 }}>
         <ApplicationList applications={applications} />
         {pageCount > 1 && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3, gap: 2 }}>
+            <Typography>
+              {totalCount > 0 ? `${(page - 1) * limit + 1} - ${Math.min(page * limit, totalCount)}` : '0'} / {totalCount}件
+            </Typography>
             <Pagination
               count={pageCount}
               page={page}
