@@ -9,7 +9,7 @@ function ManagementPage() {
   const [error, setError] = useState('');
   const [page, setPage] = useState(1); // 現在のページ
   const [totalCount, setTotalCount] = useState(0); // 総件数
-  const limit = 5; // 1ページあたりの表示件数
+  const limit = 10; // 1ページあたりの表示件数
 
   // ユーザー登録フォーム用のステート
   const [newUsername, setNewUsername] = useState('');
@@ -32,11 +32,11 @@ function ManagementPage() {
   };
 
   // APIから全申請一覧を取得する関数
-  const fetchAllApplications = async () => {
+  const fetchAllApplications = async (fetchPage: number) => {
     setError('');
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3001/api/admin/applications?page=${page}&limit=${limit}`, {
+      const response = await fetch(`http://localhost:3001/api/admin/applications?page=${fetchPage}&limit=${limit}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -90,7 +90,7 @@ function ManagementPage() {
       }
 
       setUserFormSuccess(`ユーザー '${newUsername}' を登録しました。`);
-      fetchAllApplications(); // ユーザー登録後、申請一覧を更新
+      setPage(1); // ユーザー登録後は1ページ目に戻る
       setTimeout(() => { // 成功メッセージを少し表示してからモーダルを閉じる
         handleClose();
       }, 1500);
@@ -107,7 +107,7 @@ function ManagementPage() {
 
   // コンポーネントのマウント時とページ変更時に全申請一覧を取得
   useEffect(() => {
-    fetchAllApplications();
+    fetchAllApplications(page);
   }, [page]); // pageが変更されたら再取得
 
   const pageCount = Math.ceil(totalCount / limit);
@@ -185,7 +185,10 @@ function ManagementPage() {
       {error && <p style={{ color: 'red' }}>{error}</p>} 
       <ApplicationList applications={applications} />
       {pageCount > 1 && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3, gap: 2 }}>
+          <Typography>
+            {totalCount > 0 ? `${(page - 1) * limit + 1} - ${Math.min(page * limit, totalCount)}` : '0'} / {totalCount}件
+          </Typography>
           <Pagination
             count={pageCount}
             page={page}

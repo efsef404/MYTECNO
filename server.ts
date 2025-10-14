@@ -171,14 +171,17 @@ app.post('/api/applications', authenticateToken, async (req: AuthRequest, res: R
 // --- 管理者用API ---
 
 // すべての申請一覧を取得 (管理者専用、ページング対応)
-app.get('/api/admin/applications', [authenticateToken, adminOnly], async (_req: AuthRequest, res: Response) => {
+app.get('/api/admin/applications', [authenticateToken, adminOnly], async (req: AuthRequest, res: Response) => {
   let connection;
   try {
-    // Pagination variables are temporarily removed for debugging.
+    // ページネーションの変数をクエリパラメータから取得
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const offset = (page - 1) * limit;
 
     connection = await mysql.createConnection(dbConfig);
 
-    // データ取得クエリ
+    // データ取得クエリ (LIMITとOFFSETを追加)
     const dataQuery = `
       SELECT a.id, u.username, a.date, a.reason, s.name as status,
              a.processed_at as processedAt, approver.username as approverUsername
@@ -187,6 +190,7 @@ app.get('/api/admin/applications', [authenticateToken, adminOnly], async (_req: 
       JOIN users u ON a.user_id = u.id
       LEFT JOIN users approver ON a.approver_id = approver.id
       ORDER BY processedAt DESC, a.date DESC
+      LIMIT ${limit} OFFSET ${offset}
     `;
     const [applications] = await connection.execute(dataQuery);
 
