@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, TextField, Button, Paper, Select, MenuItem, InputLabel, FormControl, Pagination } from '@mui/material'; // Paginationをインポート
+import { Box, Typography, TextField, Button, Paper, Select, MenuItem, InputLabel, FormControl, Pagination, Modal } from '@mui/material';
 import ApplicationList from '../components/ApplicationList';
 import type { ApplicationData } from '../pages/ApplicationPage'; // 型定義をインポート
+import AddIcon from '@mui/icons-material/Add';
 
 function ManagementPage() {
   const [applications, setApplications] = useState<ApplicationData[]>([]);
@@ -16,6 +17,19 @@ function ManagementPage() {
   const [newUserRole, setNewUserRole] = useState<'user' | 'admin'>('user');
   const [userFormError, setUserFormError] = useState('');
   const [userFormSuccess, setUserFormSuccess] = useState('');
+
+  // モーダル用のステートとハンドラ
+  const [open, setOpen] = useState(false);
+  const handleOpen = () => setOpen(true);
+  const handleClose = () => {
+    setOpen(false);
+    // モーダルを閉じる時にフォームの状態をリセット
+    setNewUsername('');
+    setNewPassword('');
+    setNewUserRole('user');
+    setUserFormError('');
+    setUserFormSuccess('');
+  };
 
   // APIから全申請一覧を取得する関数
   const fetchAllApplications = async () => {
@@ -76,10 +90,10 @@ function ManagementPage() {
       }
 
       setUserFormSuccess(`ユーザー '${newUsername}' を登録しました。`);
-      setNewUsername('');
-      setNewPassword('');
-      setNewUserRole('user'); // デフォルトに戻す
       fetchAllApplications(); // ユーザー登録後、申請一覧を更新
+      setTimeout(() => { // 成功メッセージを少し表示してからモーダルを閉じる
+        handleClose();
+      }, 1500);
 
     } catch (err: any) {
       setUserFormError(err.message);
@@ -104,48 +118,69 @@ function ManagementPage() {
         管理画面
       </Typography>
 
-      <Paper sx={{ p: 4, mb: 5 }}>
-        <Typography variant="h5" component="h2" gutterBottom>
-          新規ユーザー登録
-        </Typography>
-        <form onSubmit={handleAddUser}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 400 }}>
-            <TextField
-              label="ユーザー名"
-              variant="outlined"
-              fullWidth
-              value={newUsername}
-              onChange={(e) => setNewUsername(e.target.value)}
-            />
-            <TextField
-              label="パスワード"
-              variant="outlined"
-              type="password"
-              fullWidth
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-            />
-            <FormControl fullWidth>
-              <InputLabel id="user-role-label">役割</InputLabel>
-              <Select
-                labelId="user-role-label"
-                id="user-role-select"
-                value={newUserRole}
-                label="役割"
-                onChange={(e) => setNewUserRole(e.target.value as 'user' | 'admin')}
-              >
-                <MenuItem value="user">一般ユーザー</MenuItem>
-                <MenuItem value="admin">管理者</MenuItem>
-              </Select>
-            </FormControl>
-            {userFormError && <Typography color="error">{userFormError}</Typography>}
-            {userFormSuccess && <Typography color="primary">{userFormSuccess}</Typography>}
-            <Button type="submit" variant="contained" size="large">
-              ユーザー登録
-            </Button>
-          </Box>
-        </form>
-      </Paper>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
+        <Button variant="contained" onClick={handleOpen} startIcon={<AddIcon />}>
+          社員新規登録
+        </Button>
+      </Box>
+      <Modal
+        open={open}
+        onClose={handleClose}
+        aria-labelledby="user-registration-modal-title"
+        aria-describedby="user-registration-modal-description"
+      >
+        <Paper sx={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 400,
+          bgcolor: 'background.paper',
+          boxShadow: 24,
+          p: 4,
+        }}>
+          <Typography id="user-registration-modal-title" variant="h6" component="h2" gutterBottom>
+            社員新規登録
+          </Typography>
+          <form onSubmit={handleAddUser}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField
+                label="ユーザー名"
+                variant="outlined"
+                fullWidth
+                value={newUsername}
+                onChange={(e) => setNewUsername(e.target.value)}
+              />
+              <TextField
+                label="パスワード"
+                variant="outlined"
+                type="password"
+                fullWidth
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+              <FormControl fullWidth>
+                <InputLabel id="user-role-label">役割</InputLabel>
+                <Select
+                  labelId="user-role-label"
+                  id="user-role-select"
+                  value={newUserRole}
+                  label="役割"
+                  onChange={(e) => setNewUserRole(e.target.value as 'user' | 'admin')}
+                >
+                  <MenuItem value="user">一般ユーザー</MenuItem>
+                  <MenuItem value="admin">管理者</MenuItem>
+                </Select>
+              </FormControl>
+              {userFormError && <Typography color="error">{userFormError}</Typography>}
+              {userFormSuccess && <Typography color="primary">{userFormSuccess}</Typography>}
+              <Button type="submit" variant="contained" size="large">
+                ユーザー登録
+              </Button>
+            </Box>
+          </form>
+        </Paper>
+      </Modal>
 
       {error && <p style={{ color: 'red' }}>{error}</p>} 
       <ApplicationList applications={applications} />
