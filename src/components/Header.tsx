@@ -30,6 +30,10 @@ function Header({ isLoggedIn, handleLogout, userRole }: HeaderProps) {
                 <Button color="inherit" component={Link} to="/manage">
                   管理
                 </Button>
+                {/* 新規ユーザー登録へのリンクを追加 */}
+                <Button color="inherit" component={Link} to="/manage">
+                  ユーザー登録
+                </Button>
               </>
             )}
             <Button color="inherit" onClick={handleLogout} component={Link} to="/">

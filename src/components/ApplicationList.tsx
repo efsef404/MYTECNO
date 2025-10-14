@@ -41,7 +41,10 @@ function ApplicationList({ applications }: ApplicationListProps) {
           <TableHead>
             <TableRow>
               <TableCell>申請日</TableCell>
+              <TableCell>申請者</TableCell>
               <TableCell>理由</TableCell>
+              <TableCell>承認者</TableCell>
+              <TableCell>処理日</TableCell>
               <TableCell align="right">ステータス</TableCell>
             </TableRow>
           </TableHead>
@@ -54,7 +57,10 @@ function ApplicationList({ applications }: ApplicationListProps) {
                 <TableCell component="th" scope="row">
                   {app.date}
                 </TableCell>
+                <TableCell>{app.username}</TableCell>
                 <TableCell>{app.reason}</TableCell>
+                <TableCell>{app.approverUsername || '-'}</TableCell>
+                <TableCell>{app.processedAt ? new Date(app.processedAt).toLocaleDateString() : '-'}</TableCell>
                 <TableCell align="right">
                   <Chip label={app.status} color={getStatusChipColor(app.status)} />
                 </TableCell>

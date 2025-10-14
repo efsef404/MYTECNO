@@ -95,7 +95,7 @@ const adminOnly = (req: AuthRequest, res: Response, next: NextFunction) => {
 
 // --- 申請関連API ---
 
-// 自分の申請一覧を取得
+// 自分の申請一覧を取得 (ページング対応)
 app.get('/api/applications/my', authenticateToken, async (req: AuthRequest, res: Response) => {
   let connection;
   try {
@@ -104,18 +104,34 @@ app.get('/api/applications/my', authenticateToken, async (req: AuthRequest, res:
       return res.sendStatus(401);
     }
 
+    // Pagination variables are temporarily removed for debugging.
+
     connection = await mysql.createConnection(dbConfig);
-    const query = `
-      SELECT a.id, u.username, a.date, a.reason, s.name as status
+
+    // データ取得クエリ
+    const dataQuery = `
+      SELECT a.id, u.username, a.date, a.reason, s.name as status,
+             a.processed_at as processedAt, approver.username as approverUsername
       FROM applications a
       JOIN application_statuses s ON a.status_id = s.id
       JOIN users u ON a.user_id = u.id
+      LEFT JOIN users approver ON a.approver_id = approver.id
       WHERE a.user_id = ?
-      ORDER BY a.date DESC
+      ORDER BY processedAt DESC, a.date DESC
     `;
-    const [applications] = await connection.execute(query, [user.id]);
+    const [applications] = await connection.execute(dataQuery, [user.id]);
+
+    // 総件数取得クエリ
+    const countQuery = `
+      SELECT COUNT(*) as totalCount
+      FROM applications a
+      WHERE a.user_id = ?
+    `;
+    const [countRows]: [any[], any] = await connection.execute(countQuery, [user.id]);
+    const totalCount = countRows[0].totalCount;
+
     await connection.end();
-    res.json(applications);
+    res.json({ applications, totalCount });
   } catch (error) {
     console.error('Get My Applications API Error:', error);
     if (connection) await connection.end();
@@ -154,21 +170,36 @@ app.post('/api/applications', authenticateToken, async (req: AuthRequest, res: R
 
 // --- 管理者用API ---
 
-// すべての申請一覧を取得 (管理者専用)
+// すべての申請一覧を取得 (管理者専用、ページング対応)
 app.get('/api/admin/applications', [authenticateToken, adminOnly], async (_req: AuthRequest, res: Response) => {
   let connection;
   try {
+    // Pagination variables are temporarily removed for debugging.
+
     connection = await mysql.createConnection(dbConfig);
-    const query = `
-      SELECT a.id, u.username, a.date, a.reason, s.name as status
+
+    // データ取得クエリ
+    const dataQuery = `
+      SELECT a.id, u.username, a.date, a.reason, s.name as status,
+             a.processed_at as processedAt, approver.username as approverUsername
       FROM applications a
       JOIN application_statuses s ON a.status_id = s.id
       JOIN users u ON a.user_id = u.id
-      ORDER BY a.date DESC
+      LEFT JOIN users approver ON a.approver_id = approver.id
+      ORDER BY processedAt DESC, a.date DESC
     `;
-    const [applications] = await connection.execute(query);
+    const [applications] = await connection.execute(dataQuery);
+
+    // 総件数取得クエリ
+    const countQuery = `
+      SELECT COUNT(*) as totalCount
+      FROM applications
+    `;
+    const [countRows]: [any[], any] = await connection.execute(countQuery);
+    const totalCount = countRows[0].totalCount;
+
     await connection.end();
-    res.json(applications);
+    res.json({ applications, totalCount });
   } catch (error) {
     console.error('Get All Applications API Error:', error);
     if (connection) await connection.end();
@@ -224,6 +255,49 @@ app.put('/api/applications/:id/status', [authenticateToken, adminOnly], async (r
     console.error('Update Application Status API Error:', error);
     if (connection) await connection.end();
     res.status(500).json({ message: '申請ステータスの更新に失敗しました。' });
+  }
+});
+
+// 新しいユーザーを登録 (管理者専用)
+app.post('/api/users', [authenticateToken, adminOnly], async (req: AuthRequest, res: Response) => {
+  const { username, password, role } = req.body;
+
+  if (!username || !password || !role) {
+    return res.status(400).json({ message: 'ユーザー名、パスワード、役割は必須です。' });
+  }
+
+  if (!['user', 'admin'].includes(role)) {
+    return res.status(400).json({ message: '役割は \'user\' または \'admin\' のいずれかである必要があります。' });
+  }
+
+  let connection;
+  try {
+    connection = await mysql.createConnection(dbConfig);
+
+    // ユーザー名が既に存在するかチェック
+    const [existingUsers]: [any[], any] = await connection.execute('SELECT id FROM users WHERE username = ?', [username]);
+    if (existingUsers.length > 0) {
+      await connection.end();
+      return res.status(409).json({ message: 'このユーザー名は既に存在します。' });
+    }
+
+    // パスワードをハッシュ化
+    const hashedPassword = await bcrypt.hash(password, 10); // saltRounds = 10
+
+    // ユーザーをデータベースに挿入
+    const query = 'INSERT INTO users (username, password, role) VALUES (?, ?, ?)';
+    const [result]: [any, any] = await connection.execute(query, [username, hashedPassword, role]);
+
+    const newUserId = result.insertId;
+    const [rows]: [any[], any] = await connection.execute('SELECT id, username, role FROM users WHERE id = ?', [newUserId]);
+
+    await connection.end();
+    res.status(201).json(rows[0]); // パスワードは返さない
+
+  } catch (error) {
+    console.error('Create User API Error:', error);
+    if (connection) await connection.end();
+    res.status(500).json({ message: 'ユーザーの登録に失敗しました。' });
   }
 });
 

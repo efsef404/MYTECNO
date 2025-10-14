@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Chip } from '@mui/material';
+import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Chip, Pagination } from '@mui/material'; // Paginationをインポート
 import type { ApplicationData } from '../pages/ApplicationPage'; // 型定義をインポート
 
 const getStatusChipColor = (status: ApplicationData['status']) => {
@@ -18,13 +18,16 @@ const getStatusChipColor = (status: ApplicationData['status']) => {
 function ApprovalPage() {
   const [applications, setApplications] = useState<ApplicationData[]>([]);
   const [error, setError] = useState('');
+  const [page, setPage] = useState(1); // 現在のページ
+  const [totalCount, setTotalCount] = useState(0); // 総件数
+  const limit = 5; // 1ページあたりの表示件数
 
   // APIから全申請一覧を取得する関数
   const fetchAllApplications = async () => {
     setError('');
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3001/api/admin/applications', {
+      const response = await fetch(`http://localhost:3001/api/admin/applications?page=${page}&limit=${limit}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -34,10 +37,15 @@ function ApprovalPage() {
         throw new Error('全申請一覧の取得に失敗しました。');
       }
 
-      const data: ApplicationData[] = await response.json();
+      const { applications: fetchedApplications, totalCount: fetchedTotalCount } = await response.json();
       // 日付のフォーマットを整える
-      const formattedData = data.map(app => ({...app, date: new Date(app.date).toLocaleDateString()}));
+      const formattedData = fetchedApplications.map((app: ApplicationData) => ({
+        ...app,
+        date: new Date(app.date).toLocaleDateString(),
+        processedAt: app.processedAt ? new Date(app.processedAt).toLocaleDateString() : null,
+      }));
       setApplications(formattedData);
+      setTotalCount(fetchedTotalCount);
 
     } catch (err: any) {
       setError(err.message);
@@ -70,12 +78,18 @@ function ApprovalPage() {
     }
   };
 
-  // コンポーネントのマウント時に全申請一覧を取得
+  // ページ変更ハンドラ
+  const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
+    setPage(value);
+  };
+
+  // コンポーネントのマウント時とページ変更時に全申請一覧を取得
   useEffect(() => {
     fetchAllApplications();
-  }, []);
+  }, [page]); // pageが変更されたら再取得
 
   const pendingApplications = applications.filter(app => app.status === '申請中');
+  const pageCount = Math.ceil(totalCount / limit);
 
   return (
     <Paper sx={{ p: 4 }}>
@@ -95,6 +109,7 @@ function ApprovalPage() {
                 <TableCell>申請日</TableCell>
                 <TableCell>理由</TableCell>
                 <TableCell>ステータス</TableCell>
+                <TableCell>処理日</TableCell>
                 <TableCell align="right">アクション</TableCell>
               </TableRow>
             </TableHead>
@@ -108,6 +123,7 @@ function ApprovalPage() {
                   <TableCell>
                     <Chip label={app.status} color={getStatusChipColor(app.status)} />
                   </TableCell>
+                  <TableCell>{app.processedAt ? new Date(app.processedAt).toLocaleDateString() : '-'}</TableCell>
                   <TableCell align="right">
                     <Button
                       variant="contained"
@@ -130,6 +146,16 @@ function ApprovalPage() {
             </TableBody>
           </Table>
         </TableContainer>
+      )}
+      {pageCount > 1 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+          <Pagination
+            count={pageCount}
+            page={page}
+            onChange={handlePageChange}
+            color="primary"
+          />
+        </Box>
       )}
     </Paper>
   );
