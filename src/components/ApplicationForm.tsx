@@ -1,26 +1,38 @@
-import React, { useState } from 'react';
-import { Box, TextField, Button, Typography, Paper } from '@mui/material';
+import React, { useState } from 'react'; // useStateをインポート
+import { Box, TextField, Button, Typography, Paper, Checkbox, FormControlLabel } from '@mui/material'; // Checkbox, FormControlLabelを追加
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs, { Dayjs } from 'dayjs';
 
 interface ApplicationFormProps {
-  addApplication: (reason: string, requestedDate: string) => void;
+  addApplication: (reason: string, requestedDate: string, isSpecialApproval: boolean) => void; // 引数を追加
 }
 
 function ApplicationForm({ addApplication }: ApplicationFormProps) {
   const [reason, setReason] = useState('');
-  const [requestedDate, setRequestedDate] = useState<Dayjs | null>(dayjs()); // dateをrequestedDateに変更
+  const [requestedDate, setRequestedDate] = useState<Dayjs | null>(dayjs());
+  const [isSpecialApproval, setIsSpecialApproval] = useState(false); // 新しいstate
   const [error, setError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!reason.trim() || !requestedDate) { // dateをrequestedDateに変更
-      setError('申請希望日と理由を両方入力してください。'); // エラーメッセージも変更
+    if (!reason.trim() || !requestedDate) {
+      setError('申請希望日と理由を両方入力してください。');
       return;
     }
-    addApplication(reason, requestedDate.format('YYYY-MM-DDTHH:mm:ss')); // 時間情報も含めて送信
+
+    // 申請日と申請希望日が同じ日付かどうかをチェック
+    const today = dayjs().format('YYYY-MM-DD');
+    const selectedDate = requestedDate.format('YYYY-MM-DD');
+
+    if (today === selectedDate && !isSpecialApproval) {
+      setError('申請日と申請希望日が同日の場合、特認チェックボックスにチェックが必要です。' );
+      return;
+    }
+
+    addApplication(reason, requestedDate.format('YYYY-MM-DDTHH:mm:ss'), isSpecialApproval); // 引数を追加
     setReason('');
-    setRequestedDate(dayjs()); // dateをrequestedDateに変更
+    setRequestedDate(dayjs());
+    setIsSpecialApproval(false); // リセット
     setError('');
   };
 
@@ -32,10 +44,10 @@ function ApplicationForm({ addApplication }: ApplicationFormProps) {
       <form onSubmit={handleSubmit}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <DatePicker
-            label="申請希望日" // ラベルを変更
-            value={requestedDate} // valueをrequestedDateに変更
-            onChange={(newValue) => setRequestedDate(newValue)} // onChangeをrequestedDateに変更
-            minDate={dayjs()} // 当日より前の日付を選択できないようにする
+            label="申請希望日"
+            value={requestedDate}
+            onChange={(newValue) => setRequestedDate(newValue)}
+            minDate={dayjs()}
             sx={{ maxWidth: '250px' }}
           />
           <TextField
@@ -48,7 +60,18 @@ function ApplicationForm({ addApplication }: ApplicationFormProps) {
             onChange={(e) => setReason(e.target.value)}
           />
           {error && <Typography color="error">{error}</Typography>}
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 2 }}> {/* 配置調整 */}
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={isSpecialApproval}
+                  onChange={(e) => setIsSpecialApproval(e.target.checked)}
+                  name="specialApproval"
+                  color="primary"
+                />
+              }
+              label="特認"
+            />
             <Button type="submit" variant="contained" size="large">
               申請する
             </Button>

@@ -114,19 +114,15 @@ app.get('/api/applications/my', authenticateToken, async (req: AuthRequest, res:
     // データ取得クエリ
     const dataQuery = `
       SELECT a.id, u.username, a.application_date as applicationDate, a.requested_date as requestedDate, a.reason, s.name as status,
-             a.processed_at as processedAt, approver.username as approverUsername
+             a.processed_at as processedAt, approver.username as approverUsername, a.is_special_approval as isSpecialApproval
       FROM applications a
       JOIN application_statuses s ON a.status_id = s.id
       JOIN users u ON a.user_id = u.id
       LEFT JOIN users approver ON a.approver_id = approver.id
-      WHERE a.user_id = ?
-      ORDER BY processedAt DESC, a.application_date DESC
+      ORDER BY a.is_special_approval DESC, processedAt DESC, a.application_date DESC
       LIMIT ${limit} OFFSET ${offset}
     `;
-    console.log('My dataQuery:', dataQuery); // デバッグ用ログ
-    console.log('My queryParams:', [user.id]); // デバッグ用ログ
     const [applications] = await connection.execute(dataQuery, [user.id]);
-    console.log('My applications result:', applications); // デバッグ用ログ
 
     // 総件数取得クエリ
     const countQuery = `
@@ -134,13 +130,10 @@ app.get('/api/applications/my', authenticateToken, async (req: AuthRequest, res:
       FROM applications a
       WHERE a.user_id = ?
     `;
-    console.log('My countQuery:', countQuery); // デバッグ用ログ
-    console.log('My countQueryParams:', [user.id]); // デバッグ用ログ
     const [countRows]: [any[], any] = await connection.execute(countQuery, [user.id]);
     const totalCount = countRows[0].totalCount;
 
     await connection.end();
-    console.log('My Applications API Response:', { applications, totalCount }); // デバッグ用ログ
     res.json({ applications, totalCount });
   } catch (error) {
     console.error('Get My Applications API Error:', error);
@@ -151,10 +144,10 @@ app.get('/api/applications/my', authenticateToken, async (req: AuthRequest, res:
 
 // 新しい申請を作成
 app.post('/api/applications', authenticateToken, async (req: AuthRequest, res: Response) => {
-  const { applicationDate, requestedDate, reason } = req.body; // applicationDateとrequestedDateを受け取る
+  const { applicationDate, requestedDate, reason, isSpecialApproval } = req.body; // isSpecialApprovalを受け取る
   const userId = req.user?.id;
 
-  if (!applicationDate || !requestedDate || !reason) { // バリデーションも変更
+  if (!applicationDate || !requestedDate || !reason) {
     return res.status(400).json({ message: '申請日、申請希望日、理由は必須です。' });
   }
 
@@ -164,15 +157,14 @@ app.post('/api/applications', authenticateToken, async (req: AuthRequest, res: R
     // 「申請中」のステータスIDを取得 (ここではID=1と仮定)
     const pendingStatusId = 1;
     // INSERTクエリを修正
-    const query = 'INSERT INTO applications (user_id, application_date, requested_date, reason, status_id) VALUES (?, ?, ?, ?, ?)';
-    const [result]:[any, any] = await connection.execute(query, [userId, applicationDate, requestedDate, reason, pendingStatusId]);
+    const query = 'INSERT INTO applications (user_id, application_date, requested_date, reason, status_id, is_special_approval) VALUES (?, ?, ?, ?, ?, ?)';
+    const [result]:[any, any] = await connection.execute(query, [userId, applicationDate, requestedDate, reason, pendingStatusId, isSpecialApproval]);
 
     const newApplicationId = result.insertId;
-    // SELECTクエリも修正 (application_dateとrequested_dateを取得)
-    const [rows]:[any[], any] = await connection.execute('SELECT id, user_id, application_date, requested_date, reason, status_id FROM applications WHERE id = ?', [newApplicationId]);
+    // SELECTクエリも修正 (is_special_approvalを取得)
+    const [rows]:[any[], any] = await connection.execute('SELECT id, user_id, application_date, requested_date, reason, status_id, is_special_approval FROM applications WHERE id = ?', [newApplicationId]);
 
     await connection.end();
-    console.log('Create Application API Response:', rows[0]); // デバッグ用ログ
     res.status(201).json(rows[0]);
   } catch (error) {
     console.error('Create Application API Error:', error);
@@ -208,19 +200,16 @@ app.get('/api/admin/applications', [authenticateToken, adminOnly], async (req: A
     // データ取得クエリ (LIMITとOFFSET、WHERE句を追加)
     const dataQuery = `
       SELECT a.id, u.username, a.application_date as applicationDate, a.requested_date as requestedDate, a.reason, s.name as status,
-             a.processed_at as processedAt, approver.username as approverUsername
+             a.processed_at as processedAt, approver.username as approverUsername, a.is_special_approval as isSpecialApproval
       FROM applications a
       JOIN application_statuses s ON a.status_id = s.id
       JOIN users u ON a.user_id = u.id
       LEFT JOIN users approver ON a.approver_id = approver.id
       ${whereClause}
-      ORDER BY processedAt DESC, a.application_date DESC
+      ORDER BY a.is_special_approval DESC, processedAt DESC, a.application_date DESC
       LIMIT ${limit} OFFSET ${offset}
     `;
-    console.log('Admin dataQuery:', dataQuery); // デバッグ用ログ
-    console.log('Admin queryParams:', queryParams); // デバッグ用ログ
-    const [applications] = await connection.execute(dataQuery, queryParams);
-    console.log('Admin applications result:', applications); // デバッグ用ログ
+    const [applications] = await connection.execute(dataQuery, queryParams); // applicationsを定義
 
     // 総件数取得クエリ (WHERE句を追加)
     const countQuery = `
@@ -229,13 +218,10 @@ app.get('/api/admin/applications', [authenticateToken, adminOnly], async (req: A
       JOIN application_statuses s ON a.status_id = s.id
       ${whereClause}
     `;
-    console.log('Admin countQuery:', countQuery); // デバッグ用ログ
-    console.log('Admin countQueryParams:', queryParams); // デバッグ用ログ
     const [countRows]: [any[], any] = await connection.execute(countQuery, queryParams);
     const totalCount = countRows[0].totalCount;
 
     await connection.end();
-    console.log('Admin Applications API Response:', { applications, totalCount }); // デバッグ用ログ
     res.json({ applications, totalCount });
   } catch (error) {
     console.error('Get All Applications API Error:', error);
@@ -278,7 +264,7 @@ app.put('/api/applications/:id/status', [authenticateToken, adminOnly], async (r
     // 更新された申請データを取得して返す
     const [updatedRows]: [any[], any] = await connection.execute(
       `SELECT a.id, u.username, a.application_date as applicationDate, a.requested_date as requestedDate, a.reason, s.name as status,
-              a.processed_at as processedAt, approver.username as approverUsername
+              a.processed_at as processedAt, approver.username as approverUsername, a.is_special_approval as isSpecialApproval
        FROM applications a
        JOIN application_statuses s ON a.status_id = s.id
        JOIN users u ON a.user_id = u.id

@@ -14,6 +14,7 @@ export interface ApplicationData {
   status: '承認' | '否認' | '申請中';
   approverUsername: string | null; // 追加
   processedAt: string | null; // 追加
+  isSpecialApproval: boolean | number; // 特認フラグを追加 (booleanまたは数値)
 }
 
 function ApplicationPage() {
@@ -55,7 +56,7 @@ function ApplicationPage() {
   };
 
   // 新しい申請を追加する関数
-  const addApplication = async (reason: string, requestedDate: string) => {
+  const addApplication = async (reason: string, requestedDate: string, isSpecialApproval: boolean) => {
     setError('');
     try {
       const token = localStorage.getItem('token');
@@ -67,7 +68,7 @@ function ApplicationPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ reason, applicationDate, requestedDate }), // 申請日と申請希望日を送信
+        body: JSON.stringify({ reason, applicationDate, requestedDate, isSpecialApproval }), // isSpecialApprovalを追加
       });
 
       if (!response.ok) {
