@@ -71,3 +71,32 @@ export default defineConfig([
   },
 ])
 ```
+
+---
+
+## Dockerによる開発環境構築
+
+### 必要ファイル
+- Dockerfile
+- docker-compose.yml
+- .dockerignore
+
+### ビルドと起動手順
+1. Docker Desktopをインストールしてください。
+2. プロジェクトルートで以下のコマンドを実行します。
+
+```powershell
+# イメージのビルドとコンテナ起動
+docker-compose up --build
+```
+
+3. ブラウザで http://localhost:5173 にアクセスしてください。
+
+### 注意事項
+- ホットリロード対応のため、`volumes`でローカルのソースをマウントしています。
+- node_modulesはコンテナ内のものを利用します。
+- 停止は以下のコマンドで行えます。
+
+```powershell
+docker-compose down
+```
