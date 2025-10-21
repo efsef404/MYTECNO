@@ -56,9 +56,9 @@ function ApplicationPage() {
       // 日付のフォーマットを整える
       const formattedData = fetchedApplications.map((app: ApplicationData) => ({
         ...app,
-        applicationDate: app.applicationDate ? dayjs(app.applicationDate).format('MM/DD HH:mm') : '',
-        requestedDate: app.requestedDate ? dayjs(app.requestedDate).format('MM/DD') : '',
-        processedAt: app.processedAt ? dayjs(app.processedAt).format('MM/DD HH:mm') : null,
+        applicationDate: app.applicationDate ? dayjs(app.applicationDate).format('YYYY/MM/DD HH:mm') : '',
+        requestedDate: app.requestedDate ? dayjs(app.requestedDate).format('YYYY/MM/DD') : '',
+        processedAt: app.processedAt ? dayjs(app.processedAt).format('YYYY/MM/DD HH:mm') : null,
       }));
       setApplications(formattedData);
       setTotalCount(fetchedTotalCount);

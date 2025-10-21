@@ -253,11 +253,20 @@ app.get('/api/approver/applications', [authenticateToken, approverOrAdminOnly], 
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const offset = (page - 1) * limit;
+    const statusFilter = req.query.status as string; // statusクエリパラメータを取得
 
     connection = await mysql.createConnection(dbConfig);
 
-    const whereClause = 'WHERE TRIM(s.name) LIKE ?';
-    const queryParams = ['%申請中%'];
+    let whereClause = '';
+    const queryParams: (string | number)[] = [];
+
+    if (statusFilter === 'pending') {
+      whereClause = 'WHERE TRIM(s.name) LIKE ?';
+      queryParams.push('%申請中%');
+    } else if (statusFilter === 'processed') {
+      whereClause = 'WHERE TRIM(s.name) LIKE ? OR TRIM(s.name) LIKE ?';
+      queryParams.push('%承認%', '%否認%');
+    }
 
     // データ取得クエリ
     const dataQuery = `

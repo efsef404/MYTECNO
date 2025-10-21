@@ -14,6 +14,7 @@ interface DecodedToken {
   id: number;
   username: string;
   role: string;
+  departmentName: string; // Add departmentName
   iat: number;
   exp: number;
 }
@@ -21,6 +22,8 @@ interface DecodedToken {
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
+  const [departmentName, setDepartmentName] = useState<string | null>(null);
 
   // アプリケーションの初回読み込み時にトークンをチェック
   useEffect(() => {
@@ -32,6 +35,8 @@ function App() {
         if (decodedToken.exp * 1000 > Date.now()) {
           setIsLoggedIn(true);
           setUserRole(decodedToken.role);
+          setUsername(decodedToken.username);
+          setDepartmentName(decodedToken.departmentName);
         } else {
           // 有効期限切れのトークンは削除
           localStorage.removeItem('token');
@@ -49,6 +54,8 @@ function App() {
       const decodedToken: DecodedToken = jwtDecode(token);
       setIsLoggedIn(true);
       setUserRole(decodedToken.role);
+      setUsername(decodedToken.username);
+      setDepartmentName(decodedToken.departmentName);
     }
   };
 
@@ -56,12 +63,14 @@ function App() {
     localStorage.removeItem('token');
     setIsLoggedIn(false);
     setUserRole(null);
+    setUsername(null);
+    setDepartmentName(null);
   };
 
   return (
     <Router>
       <CssBaseline />
-      <Header isLoggedIn={isLoggedIn} handleLogout={handleLogout} userRole={userRole} />
+      <Header isLoggedIn={isLoggedIn} handleLogout={handleLogout} userRole={userRole} username={username} departmentName={departmentName} />
       <Container maxWidth="lg">
         <Box sx={{ my: 4 }}>
           <Routes>
