@@ -22,12 +22,15 @@ function Header({ isLoggedIn, handleLogout, userRole }: HeaderProps) {
             <Button color="inherit" component={Link} to="/apply">
               申請
             </Button>
-            {userRole === 'admin' && (
-              <>
-                <Button color="inherit" component={Link} to="/manage">
-                  管理
-                </Button>
-              </>
+            {(userRole === '承認者' || userRole === '管理者') && (
+              <Button color="inherit" component={Link} to="/approve">
+                承認
+              </Button>
+            )}
+            {userRole === '管理者' && (
+              <Button color="inherit" component={Link} to="/manage">
+                管理
+              </Button>
             )}
             <Button color="inherit" onClick={handleLogout} component={Link} to="/">
               ログアウト

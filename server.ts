@@ -86,7 +86,15 @@ const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) 
 
 // --- 管理者チェックミドルウェア ---
 const adminOnly = (req: AuthRequest, res: Response, next: NextFunction) => {
-  if (req.user?.role !== 'admin') {
+  if (req.user?.role !== '管理者') {
+    return res.sendStatus(403); // Forbidden
+  }
+  next();
+};
+
+// --- 承認者または管理者チェックミドルウェア ---
+const approverOrAdminOnly = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (req.user?.role !== '承認者' && req.user?.role !== '管理者') {
     return res.sendStatus(403); // Forbidden
   }
   next();
@@ -230,8 +238,57 @@ app.get('/api/admin/applications', [authenticateToken, adminOnly], async (req: A
   }
 });
 
+// --- 承認者用API ---
+
+// 承認待ちの申請一覧を取得 (承認者・管理者専用、ページング対応)
+app.get('/api/approver/applications', [authenticateToken, approverOrAdminOnly], async (req: AuthRequest, res: Response) => {
+  let connection;
+  try {
+    // ページネーションの変数をクエリパラメータから取得
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const offset = (page - 1) * limit;
+
+    connection = await mysql.createConnection(dbConfig);
+
+    const whereClause = 'WHERE TRIM(s.name) LIKE ?';
+    const queryParams = ['%申請中%'];
+
+    // データ取得クエリ
+    const dataQuery = `
+      SELECT a.id, u.username, a.application_date as applicationDate, a.requested_date as requestedDate, a.reason, s.name as status,
+             a.processed_at as processedAt, approver.username as approverUsername, a.is_special_approval as isSpecialApproval
+      FROM applications a
+      JOIN application_statuses s ON a.status_id = s.id
+      JOIN users u ON a.user_id = u.id
+      LEFT JOIN users approver ON a.approver_id = approver.id
+      ${whereClause}
+      ORDER BY a.is_special_approval DESC, a.application_date DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+    const [applications] = await connection.execute(dataQuery, queryParams);
+
+    // 総件数取得クエリ
+    const countQuery = `
+      SELECT COUNT(*) as totalCount
+      FROM applications a
+      JOIN application_statuses s ON a.status_id = s.id
+      ${whereClause}
+    `;
+    const [countRows]: [any[], any] = await connection.execute(countQuery, queryParams);
+    const totalCount = countRows[0].totalCount;
+
+    await connection.end();
+    res.json({ applications, totalCount });
+  } catch (error) {
+    console.error('Get Approver Applications API Error:', error);
+    if (connection) await connection.end();
+    res.status(500).json({ message: '承認待ち申請一覧の取得に失敗しました。' });
+  }
+});
+
 // 申請のステータスを更新 (管理者専用)
-app.put('/api/applications/:id/status', [authenticateToken, adminOnly], async (req: AuthRequest, res: Response) => {
+app.put('/api/applications/:id/status', [authenticateToken, approverOrAdminOnly], async (req: AuthRequest, res: Response) => {
   const { id } = req.params; // URLパラメータから申請IDを取得
   const { newStatus } = req.body; // リクエストボディから新しいステータス名を取得
   const approverId = req.user?.id; // 承認者のID
@@ -291,8 +348,8 @@ app.post('/api/users', [authenticateToken, adminOnly], async (req: AuthRequest, 
     return res.status(400).json({ message: 'ユーザー名、パスワード、役割は必須です。' });
   }
 
-  if (!['user', 'admin'].includes(role)) {
-    return res.status(400).json({ message: '役割は \'user\' または \'admin\' のいずれかである必要があります。' });
+  if (!['社員', '承認者', '管理者'].includes(role)) {
+    return res.status(400).json({ message: '役割は \'社員\', \'承認者\', \'管理者\' のいずれかである必要があります。' });
   }
 
   let connection;
@@ -323,6 +380,56 @@ app.post('/api/users', [authenticateToken, adminOnly], async (req: AuthRequest, 
     console.error('Create User API Error:', error);
     if (connection) await connection.end();
     res.status(500).json({ message: 'ユーザーの登録に失敗しました。' });
+  }
+});
+
+// --- 管理者用API (ユーザー管理) ---
+
+// 全ユーザー一覧を取得 (管理者専用)
+app.get('/api/admin/users', [authenticateToken, adminOnly], async (_req: AuthRequest, res: Response) => {
+  let connection;
+  try {
+    connection = await mysql.createConnection(dbConfig);
+    const [users]: [any[], any] = await connection.execute('SELECT id, username, role FROM users');
+    await connection.end();
+    res.json({ users });
+  } catch (error) {
+    console.error('Get All Users API Error:', error);
+    if (connection) await connection.end();
+    res.status(500).json({ message: 'ユーザー一覧の取得に失敗しました。' });
+  }
+});
+
+// ユーザーの役割を更新 (管理者専用)
+app.put('/api/admin/users/:id/role', [authenticateToken, adminOnly], async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const { newRole } = req.body;
+
+  if (!newRole) {
+    return res.status(400).json({ message: '新しい役割は必須です。' });
+  }
+
+  if (!['社員', '承認者', '管理者'].includes(newRole)) {
+    return res.status(400).json({ message: '役割は \'社員\', \'承認者\', \'管理者\' のいずれかである必要があります。' });
+  }
+
+  let connection;
+  try {
+    connection = await mysql.createConnection(dbConfig);
+    const query = 'UPDATE users SET role = ? WHERE id = ?';
+    const [result]: [any, any] = await connection.execute(query, [newRole, id]);
+
+    if (result.affectedRows === 0) {
+      await connection.end();
+      return res.status(404).json({ message: '指定されたユーザーが見つかりません。' });
+    }
+
+    await connection.end();
+    res.json({ message: 'ユーザーの役割が更新されました。' });
+  } catch (error) {
+    console.error('Update User Role API Error:', error);
+    if (connection) await connection.end();
+    res.status(500).json({ message: 'ユーザーの役割の更新に失敗しました。' });
   }
 });
 

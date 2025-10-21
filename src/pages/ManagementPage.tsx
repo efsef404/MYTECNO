@@ -1,24 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, TextField, Button, Paper, Select, MenuItem, InputLabel, FormControl, Pagination, Modal, Tabs, Tab } from '@mui/material';
-import ApplicationList from '../components/ApplicationList';
-import type { ApplicationData } from '../pages/ApplicationPage'; // 型定義をインポート
+import { Box, Typography, TextField, Button, Paper, Select, MenuItem, InputLabel, FormControl, Modal, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import dayjs from 'dayjs'; // dayjsをインポート
+import ConfirmationModal from '../components/ConfirmationModal';
+
+interface UserData {
+  id: number;
+  username: string;
+  role: '社員' | '承認者' | '管理者';
+}
 
 function ManagementPage() {
-  const [applications, setApplications] = useState<ApplicationData[]>([]);
+  const [users, setUsers] = useState<UserData[]>([]);
   const [error, setError] = useState('');
-  const [page, setPage] = useState(1); // 現在のページ
-  const [totalCount, setTotalCount] = useState(0); // 総件数
-  const limit = 10; // 1ページあたりの表示件数
-
-  // タブ選択用のステート
-  const [selectedTab, setSelectedTab] = useState<'pending' | 'processed'>('pending'); // 'pending' (申請中) または 'processed' (承認済み/否認)
 
   // ユーザー登録フォーム用のステート
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [newUserRole, setNewUserRole] = useState<'user' | 'admin'>('user');
+  const [newUserRole, setNewUserRole] = useState<'社員' | '承認者' | '管理者'>('社員');
   const [userFormError, setUserFormError] = useState('');
   const [userFormSuccess, setUserFormSuccess] = useState('');
 
@@ -30,55 +28,58 @@ function ManagementPage() {
     // モーダルを閉じる時にフォームの状態をリセット
     setNewUsername('');
     setNewPassword('');
-    setNewUserRole('user');
+    setNewUserRole('社員');
     setUserFormError('');
     setUserFormSuccess('');
   };
 
-  // APIから全申請一覧を取得する関数
-  const fetchAllApplications = async (fetchPage: number, statusFilter?: 'pending' | 'processed') => {
+  // 確認モーダル用のステート
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [confirmModalMessage, setConfirmModalMessage] = useState('');
+  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
+
+  const handleOpenConfirmModal = (message: string, action: () => void) => {
+    setConfirmModalMessage(message);
+    setConfirmAction(() => action);
+    setConfirmModalOpen(true);
+  };
+
+  const handleCloseConfirmModal = () => {
+    setConfirmModalOpen(false);
+    setConfirmAction(null);
+  };
+
+  const handleConfirmAction = () => {
+    if (confirmAction) {
+      confirmAction();
+    }
+    handleCloseConfirmModal();
+  };
+
+  // APIから全ユーザー一覧を取得する関数
+  const fetchAllUsers = async () => {
     setError('');
     try {
       const token = localStorage.getItem('token');
-      let apiUrl = `http://localhost:3001/api/admin/applications?page=${fetchPage}&limit=${limit}`;
-      if (statusFilter === 'pending') {
-        apiUrl += '&status=pending';
-      } else if (statusFilter === 'processed') {
-        apiUrl += '&status=processed';
-      } else if (statusFilter === 'all') {
-        // 'all' の場合はフィルタリングしない
-      }
-
-      const response = await fetch(apiUrl, {
+      const response = await fetch('http://localhost:3001/api/admin/users', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
 
       if (!response.ok) {
-        throw new Error('全申請一覧の取得に失敗しました。');
+        throw new Error('ユーザー一覧の取得に失敗しました。');
       }
 
-      const { applications: fetchedApplications, totalCount: fetchedTotalCount } = await response.json();
-      // 日付のフォーマットを整える
-      const formattedData = fetchedApplications.map((app: ApplicationData) => ({
-        ...app,
-        date: new Date(app.date).toLocaleDateString(),
-        applicationDate: app.applicationDate ? dayjs(app.applicationDate).format('MM/DD HH:mm') : '',
-        requestedDate: app.requestedDate ? dayjs(app.requestedDate).format('MM/DD') : '',
-        processedAt: app.processedAt ? dayjs(app.processedAt).format('MM/DD HH:mm') : null,
-      }));
-      setApplications(formattedData);
-      setTotalCount(fetchedTotalCount);
-
+      const { users: fetchedUsers } = await response.json();
+      setUsers(fetchedUsers);
     } catch (err: any) {
       setError(err.message);
     }
   };
 
   // 新しいユーザーを登録する関数
-  const handleAddUser = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddUser = async () => {
     setUserFormError('');
     setUserFormSuccess('');
 
@@ -87,76 +88,81 @@ function ManagementPage() {
       return;
     }
 
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3001/api/users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ username: newUsername, password: newPassword, role: newUserRole }),
-      });
+    handleOpenConfirmModal(
+      `ユーザー名: ${newUsername}, 役割: ${newUserRole} で新規登録しますか？`,
+      async () => {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await fetch('http://localhost:3001/api/users', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ username: newUsername, password: newPassword, role: newUserRole }),
+          });
 
-      const data = await response.json();
+          const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.message || 'ユーザー登録に失敗しました。');
+          if (!response.ok) {
+            throw new Error(data.message || 'ユーザー登録に失敗しました。');
+          }
+
+          setUserFormSuccess(`ユーザー '${newUsername}' を登録しました。`);
+          fetchAllUsers(); // ユーザー登録後に一覧を再取得
+          setTimeout(() => { // 成功メッセージを少し表示してからモーダルを閉じる
+            handleClose();
+          }, 1500);
+
+        } catch (err: any) {
+          setUserFormError(err.message);
+        }
       }
-
-      setUserFormSuccess(`ユーザー '${newUsername}' を登録しました。`);
-      setPage(1); // ユーザー登録後は1ページ目に戻る
-      setTimeout(() => { // 成功メッセージを少し表示してからモーダルを閉じる
-        handleClose();
-      }, 1500);
-
-    } catch (err: any) {
-      setUserFormError(err.message);
-    }
+    );
   };
 
-  // ページ変更ハンドラ
-  const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
-    setPage(value);
-  };
-
-  // コンポーネントのマウント時とページ変更時、タブ変更時に全申請一覧を取得
-  useEffect(() => {
-    fetchAllApplications(page, selectedTab);
-  }, [page, selectedTab]); // pageまたはselectedTabが変更されたら再取得
-
-  const pageCount = Math.ceil(totalCount / limit);
-
-  // 申請ステータスを更新する関数 (ApprovalPage.tsxからコピー)
-  const updateApplicationStatus = async (id: number, newStatus: ApplicationData['status']) => {
+  // ユーザーの役割を更新する関数
+  const handleUpdateUserRole = async (userId: number, newRole: UserData['role']) => {
     setError('');
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3001/api/applications/${id}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ newStatus }),
-      });
 
-      if (!response.ok) {
-        throw new Error('申請ステータスの更新に失敗しました。');
+    const userToUpdate = users.find(user => user.id === userId);
+    if (!userToUpdate) return;
+
+    handleOpenConfirmModal(
+      `${userToUpdate.username} の役割を ${newRole} に変更しますか？`,
+      async () => {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await fetch(`http://localhost:3001/api/admin/users/${userId}/role`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ newRole }),
+          });
+
+          if (!response.ok) {
+            throw new Error('ユーザー役割の更新に失敗しました。');
+          }
+
+          fetchAllUsers(); // 更新後に一覧を再取得
+        } catch (err: any) {
+          setError(err.message);
+        }
       }
-
-      // 成功したら申請一覧を再取得して画面を更新
-      fetchAllApplications(page, selectedTab); // selectedTabも渡す
-
-    } catch (err: any) {
-      setError(err.message);
-    }
+    );
   };
+
+  // コンポーネントのマウント時に全ユーザー一覧を取得
+  useEffect(() => {
+    fetchAllUsers();
+  }, []);
 
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
-        管理画面
+        社員管理
       </Typography>
 
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
@@ -183,7 +189,7 @@ function ManagementPage() {
           <Typography id="user-registration-modal-title" variant="h6" component="h2" gutterBottom>
             社員新規登録
           </Typography>
-          <form onSubmit={handleAddUser}>
+          <form onSubmit={(e) => { e.preventDefault(); handleAddUser(); }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <TextField
                 label="ユーザー名"
@@ -207,10 +213,11 @@ function ManagementPage() {
                   id="user-role-select"
                   value={newUserRole}
                   label="役割"
-                  onChange={(e) => setNewUserRole(e.target.value as 'user' | 'admin')}
+                  onChange={(e) => setNewUserRole(e.target.value as '社員' | '承認者' | '管理者')}
                 >
-                  <MenuItem value="user">一般ユーザー</MenuItem>
-                  <MenuItem value="admin">管理者</MenuItem>
+                  <MenuItem value="社員">社員</MenuItem>
+                  <MenuItem value="承認者">承認者</MenuItem>
+                  <MenuItem value="管理者">管理者</MenuItem>
                 </Select>
               </FormControl>
               {userFormError && <Typography color="error">{userFormError}</Typography>}
@@ -223,31 +230,50 @@ function ManagementPage() {
         </Paper>
       </Modal>
 
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs value={selectedTab} onChange={(event, newValue) => {
-          setSelectedTab(newValue);
-          setPage(1); // タブ切り替え時にページを1に戻す
-        }} aria-label="application status tabs">
-          <Tab label="申請中" value="pending" />
-          <Tab label="承認済み / 否認" value="processed" />
-        </Tabs>
-      </Box>
+      {error && <p style={{ color: 'red' }}>{error}</p>}
 
-      {error && <p style={{ color: 'red' }}>{error}</p>} 
-      <ApplicationList applications={applications} updateApplicationStatus={updateApplicationStatus} selectedTab={selectedTab} /> {/* propsを追加 */}
-      {pageCount > 1 && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3, gap: 2 }}>
-          <Typography>
-            {totalCount > 0 ? `${(page - 1) * limit + 1} - ${Math.min(page * limit, totalCount)}` : '0'} / {totalCount}件
-          </Typography>
-          <Pagination
-            count={pageCount}
-            page={page}
-            onChange={handlePageChange}
-            color="primary"
-          />
-        </Box>
-      )}
+      <TableContainer component={Paper} sx={{ mt: 3 }}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>ID</TableCell>
+              <TableCell>ユーザー名</TableCell>
+              <TableCell>役割</TableCell>
+              <TableCell>操作</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {users.map((user) => (
+              <TableRow key={user.id}>
+                <TableCell>{user.id}</TableCell>
+                <TableCell>{user.username}</TableCell>
+                <TableCell>
+                  <FormControl variant="outlined" size="small">
+                    <Select
+                      value={user.role}
+                      onChange={(e) => handleUpdateUserRole(user.id, e.target.value as UserData['role'])}
+                    >
+                      <MenuItem value="社員">社員</MenuItem>
+                      <MenuItem value="承認者">承認者</MenuItem>
+                      <MenuItem value="管理者">管理者</MenuItem>
+                    </Select>
+                  </FormControl>
+                </TableCell>
+                <TableCell>
+                  {/* 必要に応じて削除ボタンなどを追加 */}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      <ConfirmationModal
+        open={confirmModalOpen}
+        onClose={handleCloseConfirmModal}
+        onConfirm={handleConfirmAction}
+        message={confirmModalMessage}
+      />
     </Box>
   );
 }
