@@ -7,7 +7,7 @@ import { jwtDecode } from 'jwt-decode';
 // Page Components
 import LoginPage from './pages/LoginPage';
 import ApplicationPage from './pages/ApplicationPage';
-import ApprovalPage from '/src/pages/ApprovalPage.tsx';
+import ApprovalPage from './pages/ApprovalPage';
 import ManagementPage from './pages/ManagementPage';
 
 interface DecodedToken {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Box, Typography, Pagination, Tabs, Tab } from '@mui/material';
 import ApplicationList from '../components/ApplicationList';
 import type { ApplicationData } from './ApplicationPage'; // 型定義をインポート
-import dayjs from 'dayjs'; // dayjsをインポート
+import dayjs from 'dayjs';
 
 function ApprovalPage() {
   const [applications, setApplications] = useState<ApplicationData[]>([]);
@@ -42,7 +42,6 @@ function ApprovalPage() {
       // 日付のフォーマットを整える
       const formattedData = fetchedApplications.map((app: ApplicationData) => ({
         ...app,
-        date: new Date(app.date).toLocaleDateString(),
         applicationDate: app.applicationDate ? dayjs(app.applicationDate).format('MM/DD HH:mm') : '',
         requestedDate: app.requestedDate ? dayjs(app.requestedDate).format('MM/DD') : '',
         processedAt: app.processedAt ? dayjs(app.processedAt).format('MM/DD HH:mm') : null,
@@ -56,7 +55,7 @@ function ApprovalPage() {
   };
 
   // ページ変更ハンドラ
-  const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
+  const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
     setPage(value);
   };
 
@@ -100,7 +99,7 @@ function ApprovalPage() {
       </Typography>
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs value={selectedTab} onChange={(event, newValue) => {
+        <Tabs value={selectedTab} onChange={(_event, newValue) => {
           setSelectedTab(newValue);
           setPage(1); // タブ切り替え時にページを1に戻す
         }} aria-label="application status tabs">

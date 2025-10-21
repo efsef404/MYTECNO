@@ -7,16 +7,20 @@ interface UserData {
   id: number;
   username: string;
   role: '社員' | '承認者' | '管理者';
+  departmentName: string | null;
+  departmentId: number | null; // Re-adding departmentId for editing
 }
 
 function ManagementPage() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [error, setError] = useState('');
+  const [departments, setDepartments] = useState<{ id: number; name: string }[]>([]);
 
   // ユーザー登録フォーム用のステート
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newUserRole, setNewUserRole] = useState<'社員' | '承認者' | '管理者'>('社員');
+  const [newDepartmentId, setNewDepartmentId] = useState<number | string>('');
   const [userFormError, setUserFormError] = useState('');
   const [userFormSuccess, setUserFormSuccess] = useState('');
 
@@ -29,6 +33,7 @@ function ManagementPage() {
     setNewUsername('');
     setNewPassword('');
     setNewUserRole('社員');
+    setNewDepartmentId(''); // Reset department ID
     setUserFormError('');
     setUserFormSuccess('');
   };
@@ -83,8 +88,8 @@ function ManagementPage() {
     setUserFormError('');
     setUserFormSuccess('');
 
-    if (!newUsername.trim() || !newPassword.trim()) {
-      setUserFormError('ユーザー名とパスワードは必須です。');
+    if (!newUsername.trim() || !newPassword.trim() || !newDepartmentId) {
+      setUserFormError('ユーザー名、パスワード、部署は必須です。');
       return;
     }
 
@@ -99,7 +104,7 @@ function ManagementPage() {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`,
             },
-            body: JSON.stringify({ username: newUsername, password: newPassword, role: newUserRole }),
+            body: JSON.stringify({ username: newUsername, password: newPassword, role: newUserRole, departmentId: newDepartmentId }),
           });
 
           const data = await response.json();
@@ -121,15 +126,15 @@ function ManagementPage() {
     );
   };
 
-  // ユーザーの役割を更新する関数
-  const handleUpdateUserRole = async (userId: number, newRole: UserData['role']) => {
+  // ユーザーの役割と部署を更新する関数
+  const handleUpdateUser = async (userId: number, newRole: UserData['role'], newDepartmentId: number | null) => {
     setError('');
 
     const userToUpdate = users.find(user => user.id === userId);
     if (!userToUpdate) return;
 
     handleOpenConfirmModal(
-      `${userToUpdate.username} の役割を ${newRole} に変更しますか？`,
+      `${userToUpdate.username} の役割を ${newRole}, 部署を ${departments.find(d => d.id === newDepartmentId)?.name || 'なし'} に変更しますか？`,
       async () => {
         try {
           const token = localStorage.getItem('token');
@@ -139,7 +144,7 @@ function ManagementPage() {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`,
             },
-            body: JSON.stringify({ newRole }),
+            body: JSON.stringify({ newRole, departmentId: newDepartmentId }),
           });
 
           if (!response.ok) {
@@ -154,9 +159,30 @@ function ManagementPage() {
     );
   };
 
-  // コンポーネントのマウント時に全ユーザー一覧を取得
+  const fetchDepartments = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3001/api/departments', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error('部署一覧の取得に失敗しました。');
+      }
+      const { departments: fetchedDepartments } = await response.json();
+      setDepartments(fetchedDepartments);
+      console.log('Fetched departments:', fetchedDepartments); // Log fetched departments
+    } catch (err: any) {
+      setError(err.message);
+      console.error('Error fetching departments:', err); // Log error
+    }
+  };
+
+  // コンポーネントのマウント時に部署一覧と全ユーザー一覧を取得
   useEffect(() => {
     fetchAllUsers();
+    fetchDepartments();
   }, []);
 
   return (
@@ -220,6 +246,26 @@ function ManagementPage() {
                   <MenuItem value="管理者">管理者</MenuItem>
                 </Select>
               </FormControl>
+              <FormControl fullWidth>
+                <InputLabel id="new-department-label">部署</InputLabel>
+                <Select
+                  labelId="new-department-label"
+                  id="new-department-select"
+                  value={newDepartmentId}
+                  label="部署"
+                  onChange={(e) => setNewDepartmentId(e.target.value as number)}
+                >
+                  {departments.length > 0 ? (
+                    departments.map((dept) => (
+                      <MenuItem key={dept.id} value={dept.id}>
+                        {dept.name}
+                      </MenuItem>
+                    ))
+                  ) : (
+                    <MenuItem value=""><em>部署がありません</em></MenuItem>
+                  )}
+                </Select>
+              </FormControl>
               {userFormError && <Typography color="error">{userFormError}</Typography>}
               {userFormSuccess && <Typography color="primary">{userFormSuccess}</Typography>}
               <Button type="submit" variant="contained" size="large">
@@ -238,6 +284,7 @@ function ManagementPage() {
             <TableRow>
               <TableCell>ID</TableCell>
               <TableCell>ユーザー名</TableCell>
+              <TableCell>部署</TableCell>
               <TableCell>役割</TableCell>
               <TableCell>操作</TableCell>
             </TableRow>
@@ -249,9 +296,33 @@ function ManagementPage() {
                 <TableCell>{user.username}</TableCell>
                 <TableCell>
                   <FormControl variant="outlined" size="small">
+                    <InputLabel id={`department-select-label-${user.id}`}>部署</InputLabel>
+                    <Select
+                      labelId={`department-select-label-${user.id}`}
+                      id={`department-select-${user.id}`}
+                      value={user.departmentId || ''}
+                      label="部署"
+                      onChange={(e) => handleUpdateUser(user.id, user.role, e.target.value as number)}
+                      displayEmpty
+                    >
+                      <MenuItem value=""><em>---</em></MenuItem>
+                      {departments.length > 0 ? (
+                        departments.map((dept) => (
+                          <MenuItem key={dept.id} value={dept.id}>
+                            {dept.name}
+                          </MenuItem>
+                        ))
+                      ) : (
+                        <MenuItem value=""><em>部署がありません</em></MenuItem>
+                      )}
+                    </Select>
+                  </FormControl>
+                </TableCell>
+                <TableCell>
+                  <FormControl variant="outlined" size="small">
                     <Select
                       value={user.role}
-                      onChange={(e) => handleUpdateUserRole(user.id, e.target.value as UserData['role'])}
+                      onChange={(e) => handleUpdateUser(user.id, e.target.value as UserData['role'], user.departmentId)}
                     >
                       <MenuItem value="社員">社員</MenuItem>
                       <MenuItem value="承認者">承認者</MenuItem>

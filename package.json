@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:server": "tsc-watch --noClear -p tsconfig.node.json --onSuccess \"node ./dist/server.js\"",
-    "build": "tsc -b && vite build",
+    "build": "npx tsc --project tsconfig.node.json && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },

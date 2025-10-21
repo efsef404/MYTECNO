@@ -31,7 +31,7 @@ app.post('/api/login', async (req, res) => {
   let connection;
   try {
     connection = await mysql.createConnection(dbConfig);
-    const [rows]: [any[], any] = await connection.execute('SELECT * FROM users WHERE username = ?', [username]);
+    const [rows]: [any[], any] = await connection.execute('SELECT u.*, d.name as departmentName FROM users u LEFT JOIN departments d ON u.department_id = d.id WHERE u.username = ?', [username]);
 
     if (rows.length === 0) {
       await connection.end();
@@ -47,7 +47,7 @@ app.post('/api/login', async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role },
+      { id: user.id, username: user.username, role: user.role, departmentName: user.departmentName },
       process.env.JWT_SECRET || 'your_default_secret',
       { expiresIn: '1h' }
     );
@@ -64,7 +64,7 @@ app.post('/api/login', async (req, res) => {
 
 // --- 認証ミドルウェア ---
 interface AuthRequest extends Request {
-  user?: { id: number; username: string; role: string };
+  user?: { id: number; username: string; role: string; departmentName?: string };
 }
 
 const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -121,12 +121,15 @@ app.get('/api/applications/my', authenticateToken, async (req: AuthRequest, res:
 
     // データ取得クエリ
     const dataQuery = `
-      SELECT a.id, u.username, a.application_date as applicationDate, a.requested_date as requestedDate, a.reason, s.name as status,
-             a.processed_at as processedAt, approver.username as approverUsername, a.is_special_approval as isSpecialApproval
+      SELECT a.id, u.username, u.department_id, d.name as departmentName, a.application_date as applicationDate, a.requested_date as requestedDate, a.reason, s.name as status,
+             a.processed_at as processedAt, approver.username as approverUsername, approver_department.name as approverDepartmentName, a.is_special_approval as isSpecialApproval
       FROM applications a
       JOIN application_statuses s ON a.status_id = s.id
       JOIN users u ON a.user_id = u.id
       LEFT JOIN users approver ON a.approver_id = approver.id
+      LEFT JOIN departments d ON u.department_id = d.id
+      LEFT JOIN departments approver_department ON approver.department_id = approver_department.id
+      WHERE a.user_id = ?
       ORDER BY a.is_special_approval DESC, processedAt DESC, a.application_date DESC
       LIMIT ${limit} OFFSET ${offset}
     `;
@@ -207,12 +210,14 @@ app.get('/api/admin/applications', [authenticateToken, adminOnly], async (req: A
 
     // データ取得クエリ (LIMITとOFFSET、WHERE句を追加)
     const dataQuery = `
-      SELECT a.id, u.username, a.application_date as applicationDate, a.requested_date as requestedDate, a.reason, s.name as status,
-             a.processed_at as processedAt, approver.username as approverUsername, a.is_special_approval as isSpecialApproval
+      SELECT a.id, u.username, u.department_id, d.name as departmentName, a.application_date as applicationDate, a.requested_date as requestedDate, a.reason, s.name as status,
+             a.processed_at as processedAt, approver.username as approverUsername, approver_department.name as approverDepartmentName, a.is_special_approval as isSpecialApproval
       FROM applications a
       JOIN application_statuses s ON a.status_id = s.id
       JOIN users u ON a.user_id = u.id
       LEFT JOIN users approver ON a.approver_id = approver.id
+      LEFT JOIN departments d ON u.department_id = d.id
+      LEFT JOIN departments approver_department ON approver.department_id = approver_department.id
       ${whereClause}
       ORDER BY a.is_special_approval DESC, processedAt DESC, a.application_date DESC
       LIMIT ${limit} OFFSET ${offset}
@@ -256,12 +261,14 @@ app.get('/api/approver/applications', [authenticateToken, approverOrAdminOnly], 
 
     // データ取得クエリ
     const dataQuery = `
-      SELECT a.id, u.username, a.application_date as applicationDate, a.requested_date as requestedDate, a.reason, s.name as status,
-             a.processed_at as processedAt, approver.username as approverUsername, a.is_special_approval as isSpecialApproval
+      SELECT a.id, u.username, u.department_id, d.name as departmentName, a.application_date as applicationDate, a.requested_date as requestedDate, a.reason, s.name as status,
+             a.processed_at as processedAt, approver.username as approverUsername, approver_department.name as approverDepartmentName, a.is_special_approval as isSpecialApproval
       FROM applications a
       JOIN application_statuses s ON a.status_id = s.id
       JOIN users u ON a.user_id = u.id
       LEFT JOIN users approver ON a.approver_id = approver.id
+      LEFT JOIN departments d ON u.department_id = d.id
+      LEFT JOIN departments approver_department ON approver.department_id = approver_department.id
       ${whereClause}
       ORDER BY a.is_special_approval DESC, a.application_date DESC
       LIMIT ${limit} OFFSET ${offset}
@@ -320,12 +327,14 @@ app.put('/api/applications/:id/status', [authenticateToken, approverOrAdminOnly]
 
     // 更新された申請データを取得して返す
     const [updatedRows]: [any[], any] = await connection.execute(
-      `SELECT a.id, u.username, a.application_date as applicationDate, a.requested_date as requestedDate, a.reason, s.name as status,
-              a.processed_at as processedAt, approver.username as approverUsername, a.is_special_approval as isSpecialApproval
+      `SELECT a.id, u.username, u.department_id, d.name as departmentName, a.application_date as applicationDate, a.requested_date as requestedDate, a.reason, s.name as status,
+              a.processed_at as processedAt, approver.username as approverUsername, approver_department.name as approverDepartmentName, a.is_special_approval as isSpecialApproval
        FROM applications a
        JOIN application_statuses s ON a.status_id = s.id
        JOIN users u ON a.user_id = u.id
        LEFT JOIN users approver ON a.approver_id = approver.id
+       LEFT JOIN departments d ON u.department_id = d.id
+       LEFT JOIN departments approver_department ON approver.department_id = approver_department.id
        WHERE a.id = ?`,
       [id]
     );
@@ -342,10 +351,10 @@ app.put('/api/applications/:id/status', [authenticateToken, approverOrAdminOnly]
 
 // 新しいユーザーを登録 (管理者専用)
 app.post('/api/users', [authenticateToken, adminOnly], async (req: AuthRequest, res: Response) => {
-  const { username, password, role } = req.body;
+  const { username, password, role, departmentId } = req.body;
 
-  if (!username || !password || !role) {
-    return res.status(400).json({ message: 'ユーザー名、パスワード、役割は必須です。' });
+  if (!username || !password || !role || !departmentId) {
+    return res.status(400).json({ message: 'ユーザー名、パスワード、役割、部署は必須です。' });
   }
 
   if (!['社員', '承認者', '管理者'].includes(role)) {
@@ -367,11 +376,11 @@ app.post('/api/users', [authenticateToken, adminOnly], async (req: AuthRequest, 
     const hashedPassword = await bcrypt.hash(password, 10); // saltRounds = 10
 
     // ユーザーをデータベースに挿入
-    const query = 'INSERT INTO users (username, password, role) VALUES (?, ?, ?)';
-    const [result]: [any, any] = await connection.execute(query, [username, hashedPassword, role]);
+    const query = 'INSERT INTO users (username, password, role, department_id) VALUES (?, ?, ?, ?)';
+    const [result]: [any, any] = await connection.execute(query, [username, hashedPassword, role, departmentId]);
 
     const newUserId = result.insertId;
-    const [rows]: [any[], any] = await connection.execute('SELECT id, username, role FROM users WHERE id = ?', [newUserId]);
+    const [rows]: [any[], any] = await connection.execute('SELECT u.id, u.username, u.role, d.name as departmentName FROM users u JOIN departments d ON u.department_id = d.id WHERE u.id = ?', [newUserId]);
 
     await connection.end();
     res.status(201).json(rows[0]); // パスワードは返さない
@@ -390,7 +399,7 @@ app.get('/api/admin/users', [authenticateToken, adminOnly], async (_req: AuthReq
   let connection;
   try {
     connection = await mysql.createConnection(dbConfig);
-    const [users]: [any[], any] = await connection.execute('SELECT id, username, role FROM users');
+    const [users]: [any[], any] = await connection.execute('SELECT u.id, u.username, u.role, u.department_id as departmentId, d.name as departmentName FROM users u LEFT JOIN departments d ON u.department_id = d.id');
     await connection.end();
     res.json({ users });
   } catch (error) {
@@ -403,10 +412,10 @@ app.get('/api/admin/users', [authenticateToken, adminOnly], async (_req: AuthReq
 // ユーザーの役割を更新 (管理者専用)
 app.put('/api/admin/users/:id/role', [authenticateToken, adminOnly], async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
-  const { newRole } = req.body;
+  const { newRole, departmentId } = req.body;
 
-  if (!newRole) {
-    return res.status(400).json({ message: '新しい役割は必須です。' });
+  if (!newRole || !departmentId) {
+    return res.status(400).json({ message: '新しい役割と部署は必須です。' });
   }
 
   if (!['社員', '承認者', '管理者'].includes(newRole)) {
@@ -416,8 +425,8 @@ app.put('/api/admin/users/:id/role', [authenticateToken, adminOnly], async (req:
   let connection;
   try {
     connection = await mysql.createConnection(dbConfig);
-    const query = 'UPDATE users SET role = ? WHERE id = ?';
-    const [result]: [any, any] = await connection.execute(query, [newRole, id]);
+    const query = 'UPDATE users SET role = ?, department_id = ? WHERE id = ?';
+    const [result]: any = await connection.execute(query, [newRole, departmentId, id]);
 
     if (result.affectedRows === 0) {
       await connection.end();
@@ -429,7 +438,22 @@ app.put('/api/admin/users/:id/role', [authenticateToken, adminOnly], async (req:
   } catch (error) {
     console.error('Update User Role API Error:', error);
     if (connection) await connection.end();
-    res.status(500).json({ message: 'ユーザーの役割の更新に失敗しました。' });
+    res.json({ message: 'ユーザーの役割の更新に失敗しました。' });
+  }
+});
+
+// 部署一覧を取得
+app.get('/api/departments', authenticateToken, async (_req: AuthRequest, res: Response) => {
+  let connection;
+  try {
+    connection = await mysql.createConnection(dbConfig);
+    const [departments]: [any[], any] = await connection.execute('SELECT id, name FROM departments');
+    await connection.end();
+    res.json({ departments });
+  } catch (error) {
+    console.error('Get Departments API Error:', error);
+    if (connection) await connection.end();
+    res.status(500).json({ message: '部署一覧の取得に失敗しました。' });
   }
 });
 

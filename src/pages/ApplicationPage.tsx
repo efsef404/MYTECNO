@@ -3,18 +3,30 @@ import { Box, Pagination, Typography } from '@mui/material'; // Pagination, Typo
 import ApplicationForm from '../components/ApplicationForm';
 import ApplicationList from '../components/ApplicationList';
 import dayjs from 'dayjs'; // dayjsをインポート
+import { jwtDecode } from 'jwt-decode';
 
 // APIから受け取る申請データの型を定義
 export interface ApplicationData {
   id: number;
   username: string;
+  departmentName: string; // 部署名を追加
   applicationDate: string; // 申請日を追加
   requestedDate: string; // 申請希望日
   reason: string;
   status: '承認' | '否認' | '申請中';
   approverUsername: string | null; // 追加
+  approverDepartmentName: string | null; // 処理者の部署名を追加
   processedAt: string | null; // 追加
   isSpecialApproval: boolean | number; // 特認フラグを追加 (booleanまたは数値)
+}
+
+interface DecodedToken {
+  id: number;
+  username: string;
+  role: string;
+  departmentName: string;
+  iat: number;
+  exp: number;
 }
 
 function ApplicationPage() {
@@ -23,6 +35,7 @@ function ApplicationPage() {
   const [page, setPage] = useState(1); // 現在のページ
   const [totalCount, setTotalCount] = useState(0); // 総件数
   const limit = 10; // 1ページあたりの表示件数 (管理画面と合わせる)
+  const [userDepartment, setUserDepartment] = useState<string | null>(null);
 
   // APIから申請一覧を取得する関数
   const fetchApplications = async (fetchPage: number) => {
@@ -89,13 +102,23 @@ function ApplicationPage() {
   };
 
   // ページ変更ハンドラ
-  const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
+  const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
     setPage(value);
   };
 
   // コンポーネントのマウント時とページ変更時に申請一覧を取得
   useEffect(() => {
     fetchApplications(page);
+
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const decodedToken: DecodedToken = jwtDecode(token);
+        setUserDepartment(decodedToken.departmentName);
+      } catch (error) {
+        console.error('Invalid token:', error);
+      }
+    }
   }, [page]); // pageが変更されたら再取得
 
   const pageCount = Math.ceil(totalCount / limit);
@@ -103,6 +126,9 @@ function ApplicationPage() {
   return (
     <Box>
       {error && <p style={{ color: 'red' }}>{error}</p>} 
+      <Typography variant="h5" gutterBottom>
+        所属部署: {userDepartment}
+      </Typography>
       <ApplicationForm addApplication={addApplication} />
       <Box sx={{ mt: 5 }}>
         <ApplicationList applications={applications} />
@@ -125,4 +151,3 @@ function ApplicationPage() {
 }
 
 export default ApplicationPage;
-
