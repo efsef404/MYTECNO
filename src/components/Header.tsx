@@ -36,9 +36,12 @@ function Header({ isLoggedIn, handleLogout, userRole, username, departmentName }
     <AppBar 
       position="static" 
       sx={{
-        backgroundColor: 'white',
-        color: 'text.primary',
-        boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
+        backgroundColor: 'rgba(255, 255, 255, 0.15)', // Transparent background
+        backdropFilter: 'blur(10px)', // Frosted glass effect
+        WebkitBackdropFilter: 'blur(10px)', // Safari support
+        borderBottom: '1px solid rgba(255, 255, 255, 0.3)', // Subtle border
+        boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)', // Subtle shadow
+        color: 'white', // Adjust text color for better contrast
       }}
     >
       <Toolbar>

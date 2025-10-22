@@ -1,157 +1,125 @@
+
 :root {
-  --primary-color: #2563eb;
-  --primary-hover: #1d4ed8;
-  --secondary-color: #64748b;
-  --background-color: #f8fafc;
-  --surface-color: #ffffff;
-  --text-primary: #1e293b;
-  --text-secondary: #64748b;
-  --error-color: #ef4444;
-  --success-color: #22c55e;
-  --border-color: #e2e8f0;
-  --spacing-xs: 0.25rem;
-  --spacing-sm: 0.5rem;
-  --spacing-md: 1rem;
-  --spacing-lg: 1.5rem;
-  --spacing-xl: 2rem;
-  --border-radius: 0.5rem;
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  /* background-color: #242424; */ /* Removed default background */
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
 }
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: var(--background-color);
-  color: var(--text-primary);
-  line-height: 1.5;
+  /* display: flex; */ /* Remove flex to allow normal block flow */
+  /* place-items: center; */ /* Remove centering */
+  min-width: 320px;
+  min-height: 100vh;
+  background-image: url('https://source.unsplash.com/random/1920x1080/?abstract,nature'); /* Random background for glass effect */
+  background-size: cover;
+  background-attachment: fixed;
+  background-position: center;
+  /* overflow: hidden; */ /* Remove to allow scrolling */
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+#root {
+  width: 100%;
+  /* height: 100%; */ /* Remove fixed height to allow content to dictate height */
+  /* display: flex; */ /* Remove flex */
+  /* justify-content: center; */ /* Remove centering */
+  /* align-items: center; */ /* Remove centering */
 }
 
-/* 共通のボタンスタイル */
+.glass-container {
+  background: rgba(255, 255, 255, 0.15); /* Transparent background */
+  border-radius: 16px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px); /* Frosted glass effect */
+  -webkit-backdrop-filter: blur(10px); /* Safari support */
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 20px;
+  margin: 20px;
+  max-width: 90%;
+  max-height: 90%;
+  overflow-y: auto;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+  color: #fff; /* Adjust text color for better contrast */
+  text-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
+
 button {
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--border-radius);
-  border: none;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.3); /* Transparent border */
+  padding: 0.6em 1.2em;
+  font-size: 1em;
   font-weight: 500;
+  font-family: inherit;
+  background-color: rgba(255, 255, 255, 0.2); /* Transparent button background */
   cursor: pointer;
-  transition: background-color 0.2s, transform 0.1s;
+  transition: all 0.25s;
+  color: #fff; /* Adjust text color */
 }
-
 button:hover {
-  transform: translateY(-1px);
+  border-color: #646cff;
+  background-color: rgba(255, 255, 255, 0.3);
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
 }
 
-button:active {
-  transform: translateY(0);
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    /* background-color: #ffffff; */ /* Removed default background */
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: rgba(255, 255, 255, 0.8); /* Lighter transparent button for light mode */
+    color: #213547;
+  }
+  .glass-container {
+    background: rgba(255, 255, 255, 0.8); /* Lighter transparent background for light mode */
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+  }
+  h1 {
+    color: #213547;
+    text-shadow: none;
+  }
 }
 
-.button-primary {
-  background-color: var(--primary-color);
-  color: white;
+input {
+  padding: 0.5em;
+  margin: 0.5em 0;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.3); /* Transparent border */
+  background-color: rgba(255, 255, 255, 0.1); /* Transparent input background */
+  color: #fff; /* Adjust text color */
 }
-
-.button-primary:hover {
-  background-color: var(--primary-hover);
-}
-
-.button-secondary {
-  background-color: var(--surface-color);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-}
-
-.button-secondary:hover {
-  background-color: var(--background-color);
-}
-
-/* 入力フォームのスタイル */
-input, select, textarea {
-  padding: var(--spacing-sm);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  font-size: 1rem;
-  width: 100%;
-  transition: border-color 0.2s;
-}
-
-input:focus, select:focus, textarea:focus {
+input:focus {
+  border-color: #646cff;
   outline: none;
-  border-color: var(--primary-color);
-}
-
-/* カードスタイル */
-.card {
-  background-color: var(--surface-color);
-  border-radius: var(--border-radius);
-  padding: var(--spacing-lg);
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow 0.2s;
-}
-
-.card:hover {
-  box-shadow: var(--shadow-md);
-}
-
-/* ヘッダーとナビゲーション */
-header {
-  background-color: var(--surface-color);
-  box-shadow: var(--shadow-sm);
-  padding: var(--spacing-md) var(--spacing-xl);
-}
-
-nav {
-  display: flex;
-  gap: var(--spacing-md);
-  align-items: center;
-}
-
-/* グリッドレイアウト */
-.grid {
-  display: grid;
-  gap: var(--spacing-md);
-}
-
-/* フレックスレイアウト */
-.flex {
-  display: flex;
-  gap: var(--spacing-md);
-}
-
-/* レスポンシブコンテナ */
-.container {
-  width: 100%;
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 var(--spacing-md);
-}
-
-/* アニメーション */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.fade-in {
-  animation: fadeIn 0.3s ease-out;
 }

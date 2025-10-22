@@ -185,7 +185,7 @@ function ApplicationList({ applications, updateApplicationStatus, selectedTab }:
               <CardContent sx={{ flexGrow: 1, p: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                   <Typography variant="subtitle1">
-                    {app.departmentName}　{app.username}
+                    {app.departmentName} {app.username}
                   </Typography>
                   {/* ステータスと特認チップ表示（デザイン変更なし） */}
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -209,7 +209,7 @@ function ApplicationList({ applications, updateApplicationStatus, selectedTab }:
                   </Box>
                 </Box>
                 <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-                  申請日: {dayjs(app.applicationDate).format('YYYY/MM/DD')}　
+                  申請日: {dayjs(app.applicationDate).format('YYYY/MM/DD')} 
                   <br/>
                   希望日: {dayjs(app.requestedDate).format('YYYY/MM/DD')}
                 </Typography>

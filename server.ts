@@ -466,6 +466,36 @@ app.get('/api/departments', authenticateToken, async (_req: AuthRequest, res: Re
   }
 });
 
+// --- 新しいエンドポイント: 承認済み申請一覧を取得 ---
+app.get('/api/applications/approved', authenticateToken, async (_req: AuthRequest, res: Response) => {
+  let connection;
+  try {
+    connection = await mysql.createConnection(dbConfig);
+
+    const query = `
+      SELECT
+        u.username AS employeeName,
+        DATE_FORMAT(a.application_date, '%Y-%m-%d') AS applicationDate
+      FROM
+        applications a
+      JOIN
+        users u ON a.user_id = u.id
+      WHERE
+        a.status_id = 2 AND a.approver_id IS NOT NULL
+      ORDER BY
+        a.requested_date DESC;
+    `;
+    const [approvedApplications]: [any[], any] = await connection.execute(query);
+
+    await connection.end();
+    res.json(approvedApplications);
+  } catch (error) {
+    console.error('Get Approved Applications API Error:', error);
+    if (connection) await connection.end();
+    res.status(500).json({ message: '承認済み申請の取得に失敗しました。' });
+  }
+});
+
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

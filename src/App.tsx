@@ -72,7 +72,7 @@ function App() {
       <CssBaseline />
       <Header isLoggedIn={isLoggedIn} handleLogout={handleLogout} userRole={userRole} username={username} departmentName={departmentName} />
       <Container maxWidth="lg">
-        <Box sx={{ my: 4 }}>
+        <Box sx={{ my: 4 }} className="glass-container">
           <Routes>
             <Route path="/" element={!isLoggedIn ? <LoginPage handleLogin={handleLogin} /> : <Navigate to="/apply" />} />
             <Route

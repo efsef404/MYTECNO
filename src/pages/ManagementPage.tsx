@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Box, Typography, TextField, Button, Paper, Select, MenuItem, InputLabel, FormControl, Modal, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import ConfirmationModal from '../components/ConfirmationModal';
+import CalendarModal from '../components/CalendarModal';
 
 interface UserData {
   id: number;
@@ -11,10 +12,41 @@ interface UserData {
   departmentId: number | null; // Re-adding departmentId for editing
 }
 
+interface ApplicationData {
+  id: number;
+  username: string;
+  requestedDate: string;
+  status: '承認' | '否認' | '申請中';
+  reason: string;
+}
+
 function ManagementPage() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [error, setError] = useState('');
   const [departments, setDepartments] = useState<{ id: number; name: string }[]>([]);
+  const [approvedApplications, setApprovedApplications] = useState<ApplicationData[]>([]);
+
+  // APIから承認済み申請一覧を取得する関数
+  const fetchApprovedApplications = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3001/api/approver/applications?statusFilter=processed', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('承認済み申請一覧の取得に失敗しました。');
+      }
+
+      const { applications: fetchedApplications } = await response.json();
+      setApprovedApplications(fetchedApplications);
+    } catch (err: any) {
+      console.error('Error fetching approved applications:', err);
+    }
+  };
+
 
   // ユーザー登録フォーム用のステート
   const [newUsername, setNewUsername] = useState('');
@@ -42,6 +74,7 @@ function ManagementPage() {
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmModalMessage, setConfirmModalMessage] = useState('');
   const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
+  const [openCalendarModal, setOpenCalendarModal] = useState(false); // New state for calendar modal
 
   const handleOpenConfirmModal = (message: string, action: () => void) => {
     setConfirmModalMessage(message);
@@ -183,7 +216,14 @@ function ManagementPage() {
   useEffect(() => {
     fetchAllUsers();
     fetchDepartments();
+    fetchApprovedApplications(); // Fetch approved applications on mount
   }, []);
+
+  useEffect(() => {
+    if (openCalendarModal) {
+      fetchApprovedApplications(); // Refresh approved applications when modal opens
+    }
+  }, [openCalendarModal]);
 
   return (
     <Box>
@@ -191,9 +231,12 @@ function ManagementPage() {
         社員管理
       </Typography>
 
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mb: 3 }}>
         <Button variant="contained" onClick={handleOpen} startIcon={<AddIcon />}>
           社員新規登録
+        </Button>
+        <Button variant="outlined" onClick={() => setOpenCalendarModal(true)}>
+          カレンダー表示
         </Button>
       </Box>
       <Modal
@@ -305,7 +348,7 @@ function ManagementPage() {
                       onChange={(e) => handleUpdateUser(user.id, user.role, e.target.value as number)}
                       displayEmpty
                     >
-                      <MenuItem value=""><em>---</em></MenuItem>
+                      <MenuItem value=""><em>部署なし</em></MenuItem>
                       {departments.length > 0 ? (
                         departments.map((dept) => (
                           <MenuItem key={dept.id} value={dept.id}>
@@ -344,6 +387,12 @@ function ManagementPage() {
         onClose={handleCloseConfirmModal}
         onConfirm={handleConfirmAction}
         message={confirmModalMessage}
+      />
+
+      <CalendarModal
+        open={openCalendarModal}
+        onClose={() => setOpenCalendarModal(false)}
+        applications={approvedApplications}
       />
     </Box>
   );
