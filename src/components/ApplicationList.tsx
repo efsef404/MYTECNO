@@ -31,7 +31,7 @@ interface ConfirmModalProps {
   action: '承認' | '否認';
 }
 
-// ✅ 確認モーダル（承認・否認時に表示）
+// 確認モーダル（承認・否認時に表示）
 const ConfirmModal: React.FC<ConfirmModalProps> = ({ open, onClose, onConfirm, action }) => (
   <Modal open={open} onClose={onClose} aria-labelledby="confirm-modal-title">
     <Box
@@ -68,21 +68,22 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({ open, onClose, onConfirm, a
   </Modal>
 );
 
-// ✅ ステータスに応じたChipの設定
+// ---- ここだけ変更: ステータス表示の文言・色・アイコンを明確にする ----
+// 目的: デザイン（位置・サイズ等）は変えずに「申請中」「承認済」「否認済」をわかりやすくする
 const getStatusChipProps = (status: string) => {
   switch (status) {
     case '承認':
-      return { color: 'success' as const, icon: <CheckCircleIcon fontSize="small" />, label: '承認' };
+      return { color: 'success' as const, icon: <CheckCircleIcon fontSize="small" />, label: '承認済' };
     case '否認':
-      return { color: 'error' as const, icon: <CancelIcon fontSize="small" />, label: '否認' };
+      return { color: 'error' as const, icon: <CancelIcon fontSize="small" />, label: '否認済' };
     case '申請中':
-      return { color: 'default' as const, icon: <AccessTimeIcon fontSize="small" />, label: '申請中' };
+      return { color: 'warning' as const, icon: <AccessTimeIcon fontSize="small" />, label: '申請中' };
     default:
       return { color: 'default' as const, icon: undefined, label: status };
   }
 };
+// --------------------------------------------------------------------
 
-// ✅ 詳細モーダル用スタイル
 const modalStyle = {
   position: 'absolute',
   top: '50%',
@@ -137,18 +138,18 @@ function ApplicationList({ applications, updateApplicationStatus, selectedTab }:
               position: 'absolute',
               bottom: -1,
               left: 0,
-              width: '2em',
+              width: '7em',
               height: 3,
               backgroundColor: 'primary.main',
               borderRadius: 1,
             },
           }}
         >
-          申請一覧
+          自分の申請一覧
         </Typography>
       </Box>
 
-      {/* ✅ 一覧表示部分 */}
+      {/* 一覧表示部分 */}
       <Box
         sx={{
           mt: 2,
@@ -186,7 +187,7 @@ function ApplicationList({ applications, updateApplicationStatus, selectedTab }:
                   <Typography variant="subtitle1">
                     {app.departmentName}　{app.username}
                   </Typography>
-                  {/* ✅ ステータスと特認チップ表示 */}
+                  {/* ステータスと特認チップ表示（デザイン変更なし） */}
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     {app.isSpecialApproval ? (
                       <Chip
@@ -197,10 +198,12 @@ function ApplicationList({ applications, updateApplicationStatus, selectedTab }:
                         sx={{ fontWeight: 600 }}
                       />
                     ) : null}
+                    {/* ここで全ステータス（申請中 / 承認済 / 否認済）を表示 */}
                     <Chip
                       label={getStatusChipProps(app.status).label}
                       color={getStatusChipProps(app.status).color}
                       size="small"
+                      icon={getStatusChipProps(app.status).icon}
                       sx={{ fontWeight: 600 }}
                     />
                   </Box>
@@ -212,7 +215,7 @@ function ApplicationList({ applications, updateApplicationStatus, selectedTab }:
                 </Typography>
               </CardContent>
 
-              {/* ✅ アクションボタン */}
+              {/* アクションボタン */}
               <CardActions sx={{ justifyContent: 'flex-end', mt: 'auto' }}>
                 {selectedTab === 'pending' && app.status === '申請中' && updateApplicationStatus && (
                   <>
@@ -241,7 +244,7 @@ function ApplicationList({ applications, updateApplicationStatus, selectedTab }:
         )}
       </Box>
 
-      {/* ✅ 詳細モーダル */}
+      {/* 詳細モーダル */}
       <Modal open={openModal} onClose={handleCloseModal}>
         <Box sx={modalStyle}>
           <Box sx={{ position: 'relative' }}>
@@ -275,6 +278,7 @@ function ApplicationList({ applications, updateApplicationStatus, selectedTab }:
                       label={getStatusChipProps(selectedApplication.status).label}
                       color={getStatusChipProps(selectedApplication.status).color}
                       size="small"
+                      icon={getStatusChipProps(selectedApplication.status).icon}
                       sx={{ fontWeight: 600 }}
                     />
                     {!!selectedApplication.isSpecialApproval && (
@@ -345,7 +349,7 @@ function ApplicationList({ applications, updateApplicationStatus, selectedTab }:
         </Box>
       </Modal>
 
-      {/* ✅ 承認/否認確認モーダル */}
+      {/* 承認/否認確認モーダル */}
       <ConfirmModal
         open={confirmModal.open}
         onClose={() => setConfirmModal((prev) => ({ ...prev, open: false }))}
