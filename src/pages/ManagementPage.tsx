@@ -1,126 +1,113 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, TextField, Button, Paper, Select, MenuItem, InputLabel, FormControl, Modal, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
+import {
+  Box, Typography, TextField, Button, Paper,
+  Select, MenuItem, InputLabel, FormControl, Modal,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow
+} from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import ConfirmationModal from '../components/ConfirmationModal';
 import CalendarModal from '../components/CalendarModal';
+import type { ApplicationData } from '../types/ApplicationData';
 
 interface UserData {
   id: number;
   username: string;
   role: '社員' | '承認者' | '管理者';
   departmentName: string | null;
-  departmentId: number | null; // Re-adding departmentId for editing
-}
-
-interface ApplicationData {
-  id: number;
-  username: string;
-  requestedDate: string;
-  status: '承認' | '否認' | '申請中';
-  reason: string;
+  departmentId: number | null;
 }
 
 function ManagementPage() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [error, setError] = useState('');
   const [departments, setDepartments] = useState<{ id: number; name: string }[]>([]);
-  const [approvedApplications, setApprovedApplications] = useState<ApplicationData[]>([]);
+  const [applications, setApplications] = useState<ApplicationData[]>([]);
+  const [calendarModalOpen, setCalendarModalOpen] = useState(false);
 
-  // APIから承認済み申請一覧を取得する関数
-  const fetchApprovedApplications = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3001/api/approver/applications?statusFilter=processed', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('承認済み申請一覧の取得に失敗しました。');
-      }
-
-      const { applications: fetchedApplications } = await response.json();
-      setApprovedApplications(fetchedApplications);
-    } catch (err: any) {
-      console.error('Error fetching approved applications:', err);
-    }
-  };
-
-
-  // ユーザー登録フォーム用のステート
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newUserRole, setNewUserRole] = useState<'社員' | '承認者' | '管理者'>('社員');
-  const [newDepartmentId, setNewDepartmentId] = useState<number | string>('');
+  const [newDepartmentId, setNewDepartmentId] = useState<string>('');
   const [userFormError, setUserFormError] = useState('');
   const [userFormSuccess, setUserFormSuccess] = useState('');
 
-  // モーダル用のステートとハンドラ
   const [open, setOpen] = useState(false);
   const handleOpen = () => setOpen(true);
   const handleClose = () => {
     setOpen(false);
-    // モーダルを閉じる時にフォームの状態をリセット
     setNewUsername('');
     setNewPassword('');
     setNewUserRole('社員');
-    setNewDepartmentId(''); // Reset department ID
+    setNewDepartmentId('');
     setUserFormError('');
     setUserFormSuccess('');
   };
 
-  // 確認モーダル用のステート
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmModalMessage, setConfirmModalMessage] = useState('');
   const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
-  const [openCalendarModal, setOpenCalendarModal] = useState(false); // New state for calendar modal
 
   const handleOpenConfirmModal = (message: string, action: () => void) => {
     setConfirmModalMessage(message);
     setConfirmAction(() => action);
     setConfirmModalOpen(true);
   };
-
   const handleCloseConfirmModal = () => {
     setConfirmModalOpen(false);
     setConfirmAction(null);
   };
-
   const handleConfirmAction = () => {
-    if (confirmAction) {
-      confirmAction();
-    }
+    if (confirmAction) confirmAction();
     handleCloseConfirmModal();
   };
 
-  // APIから全ユーザー一覧を取得する関数
   const fetchAllUsers = async () => {
     setError('');
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('http://localhost:3001/api/admin/users', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: { 'Authorization': `Bearer ${token}` },
       });
-
-      if (!response.ok) {
-        throw new Error('ユーザー一覧の取得に失敗しました。');
-      }
-
-      const { users: fetchedUsers } = await response.json();
-      setUsers(fetchedUsers);
+      if (!response.ok) throw new Error('ユーザー一覧の取得に失敗しました。');
+      const data = await response.json();
+      setUsers(data.users || []);
     } catch (err: any) {
       setError(err.message);
     }
   };
 
-  // 新しいユーザーを登録する関数
+  const fetchAllApplications = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3001/api/admin/applications', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error('申請データの取得に失敗しました。');
+      const data = await response.json();
+      setApplications(data.applications || []);
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  const fetchDepartments = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:3001/api/departments', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error('部署一覧の取得に失敗しました。');
+      const data = await response.json();
+      setDepartments(data.departments || []);
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
   const handleAddUser = async () => {
     setUserFormError('');
     setUserFormSuccess('');
-
     if (!newUsername.trim() || !newPassword.trim() || !newDepartmentId) {
       setUserFormError('ユーザー名、パスワード、部署は必須です。');
       return;
@@ -137,21 +124,18 @@ function ManagementPage() {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`,
             },
-            body: JSON.stringify({ username: newUsername, password: newPassword, role: newUserRole, departmentId: newDepartmentId }),
+            body: JSON.stringify({
+              username: newUsername,
+              password: newPassword,
+              role: newUserRole,
+              departmentId: Number(newDepartmentId),
+            }),
           });
-
           const data = await response.json();
-
-          if (!response.ok) {
-            throw new Error(data.message || 'ユーザー登録に失敗しました。');
-          }
-
+          if (!response.ok) throw new Error(data.message || 'ユーザー登録に失敗しました。');
           setUserFormSuccess(`ユーザー '${newUsername}' を登録しました。`);
-          fetchAllUsers(); // ユーザー登録後に一覧を再取得
-          setTimeout(() => { // 成功メッセージを少し表示してからモーダルを閉じる
-            handleClose();
-          }, 1500);
-
+          fetchAllUsers();
+          setTimeout(handleClose, 1500);
         } catch (err: any) {
           setUserFormError(err.message);
         }
@@ -159,11 +143,13 @@ function ManagementPage() {
     );
   };
 
-  // ユーザーの役割と部署を更新する関数
-  const handleUpdateUser = async (userId: number, newRole: UserData['role'], newDepartmentId: number | null) => {
+  const handleUpdateUser = async (
+    userId: number,
+    newRole: UserData['role'],
+    newDepartmentId: number | null
+  ) => {
     setError('');
-
-    const userToUpdate = users.find(user => user.id === userId);
+    const userToUpdate = users.find(u => u.id === userId);
     if (!userToUpdate) return;
 
     handleOpenConfirmModal(
@@ -179,12 +165,8 @@ function ManagementPage() {
             },
             body: JSON.stringify({ newRole, departmentId: newDepartmentId }),
           });
-
-          if (!response.ok) {
-            throw new Error('ユーザー役割の更新に失敗しました。');
-          }
-
-          fetchAllUsers(); // 更新後に一覧を再取得
+          if (!response.ok) throw new Error('ユーザー情報の更新に失敗しました。');
+          fetchAllUsers();
         } catch (err: any) {
           setError(err.message);
         }
@@ -192,134 +174,26 @@ function ManagementPage() {
     );
   };
 
-  const fetchDepartments = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3001/api/departments', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      if (!response.ok) {
-        throw new Error('部署一覧の取得に失敗しました。');
-      }
-      const { departments: fetchedDepartments } = await response.json();
-      setDepartments(fetchedDepartments);
-      console.log('Fetched departments:', fetchedDepartments); // Log fetched departments
-    } catch (err: any) {
-      setError(err.message);
-      console.error('Error fetching departments:', err); // Log error
-    }
-  };
-
-  // コンポーネントのマウント時に部署一覧と全ユーザー一覧を取得
   useEffect(() => {
     fetchAllUsers();
     fetchDepartments();
-    fetchApprovedApplications(); // Fetch approved applications on mount
+    fetchAllApplications();
   }, []);
-
-  useEffect(() => {
-    if (openCalendarModal) {
-      fetchApprovedApplications(); // Refresh approved applications when modal opens
-    }
-  }, [openCalendarModal]);
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
-        社員管理
-      </Typography>
+      <Typography variant="h4" gutterBottom>社員管理</Typography>
 
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mb: 3 }}>
+        <Button variant="contained" onClick={() => setCalendarModalOpen(true)} startIcon={<CalendarMonthIcon />}>
+          カレンダー
+        </Button>
         <Button variant="contained" onClick={handleOpen} startIcon={<AddIcon />}>
           社員新規登録
         </Button>
-        <Button variant="outlined" onClick={() => setOpenCalendarModal(true)}>
-          カレンダー表示
-        </Button>
       </Box>
-      <Modal
-        open={open}
-        onClose={handleClose}
-        aria-labelledby="user-registration-modal-title"
-        aria-describedby="user-registration-modal-description"
-      >
-        <Paper sx={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: 400,
-          bgcolor: 'background.paper',
-          boxShadow: 24,
-          p: 4,
-        }}>
-          <Typography id="user-registration-modal-title" variant="h6" component="h2" gutterBottom>
-            社員新規登録
-          </Typography>
-          <form onSubmit={(e) => { e.preventDefault(); handleAddUser(); }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <TextField
-                label="ユーザー名"
-                variant="outlined"
-                fullWidth
-                value={newUsername}
-                onChange={(e) => setNewUsername(e.target.value)}
-              />
-              <TextField
-                label="パスワード"
-                variant="outlined"
-                type="password"
-                fullWidth
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
-              <FormControl fullWidth>
-                <InputLabel id="user-role-label">役割</InputLabel>
-                <Select
-                  labelId="user-role-label"
-                  id="user-role-select"
-                  value={newUserRole}
-                  label="役割"
-                  onChange={(e) => setNewUserRole(e.target.value as '社員' | '承認者' | '管理者')}
-                >
-                  <MenuItem value="社員">社員</MenuItem>
-                  <MenuItem value="承認者">承認者</MenuItem>
-                  <MenuItem value="管理者">管理者</MenuItem>
-                </Select>
-              </FormControl>
-              <FormControl fullWidth>
-                <InputLabel id="new-department-label">部署</InputLabel>
-                <Select
-                  labelId="new-department-label"
-                  id="new-department-select"
-                  value={newDepartmentId}
-                  label="部署"
-                  onChange={(e) => setNewDepartmentId(e.target.value as number)}
-                >
-                  {departments.length > 0 ? (
-                    departments.map((dept) => (
-                      <MenuItem key={dept.id} value={dept.id}>
-                        {dept.name}
-                      </MenuItem>
-                    ))
-                  ) : (
-                    <MenuItem value=""><em>部署がありません</em></MenuItem>
-                  )}
-                </Select>
-              </FormControl>
-              {userFormError && <Typography color="error">{userFormError}</Typography>}
-              {userFormSuccess && <Typography color="primary">{userFormSuccess}</Typography>}
-              <Button type="submit" variant="contained" size="large">
-                ユーザー登録
-              </Button>
-            </Box>
-          </form>
-        </Paper>
-      </Modal>
 
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {error && <Typography color="error" sx={{ mt: 2 }}>{error}</Typography>}
 
       <TableContainer component={Paper} sx={{ mt: 3 }}>
         <Table>
@@ -329,52 +203,43 @@ function ManagementPage() {
               <TableCell>ユーザー名</TableCell>
               <TableCell>部署</TableCell>
               <TableCell>役割</TableCell>
-              <TableCell>操作</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {users.map((user) => (
+            {users.map(user => (
               <TableRow key={user.id}>
                 <TableCell>{user.id}</TableCell>
                 <TableCell>{user.username}</TableCell>
                 <TableCell>
-                  <FormControl variant="outlined" size="small">
-                    <InputLabel id={`department-select-label-${user.id}`}>部署</InputLabel>
+                  <FormControl size="small" fullWidth>
                     <Select
-                      labelId={`department-select-label-${user.id}`}
-                      id={`department-select-${user.id}`}
-                      value={user.departmentId || ''}
-                      label="部署"
-                      onChange={(e) => handleUpdateUser(user.id, user.role, e.target.value as number)}
-                      displayEmpty
+                      value={user.departmentId ? user.departmentId.toString() : ''}
+                      onChange={(e) =>
+                        handleUpdateUser(user.id, user.role, Number(e.target.value) || null)
+                      }
                     >
-                      <MenuItem value=""><em>部署なし</em></MenuItem>
-                      {departments.length > 0 ? (
-                        departments.map((dept) => (
-                          <MenuItem key={dept.id} value={dept.id}>
-                            {dept.name}
-                          </MenuItem>
-                        ))
-                      ) : (
-                        <MenuItem value=""><em>部署がありません</em></MenuItem>
-                      )}
+                      <MenuItem value=""><em>なし</em></MenuItem>
+                      {departments.map((dept) => (
+                        <MenuItem key={dept.id} value={dept.id.toString()}>
+                          {dept.name}
+                        </MenuItem>
+                      ))}
                     </Select>
                   </FormControl>
                 </TableCell>
                 <TableCell>
-                  <FormControl variant="outlined" size="small">
+                  <FormControl size="small">
                     <Select
                       value={user.role}
-                      onChange={(e) => handleUpdateUser(user.id, e.target.value as UserData['role'], user.departmentId)}
+                      onChange={(e) =>
+                        handleUpdateUser(user.id, e.target.value as UserData['role'], user.departmentId)
+                      }
                     >
                       <MenuItem value="社員">社員</MenuItem>
                       <MenuItem value="承認者">承認者</MenuItem>
                       <MenuItem value="管理者">管理者</MenuItem>
                     </Select>
                   </FormControl>
-                </TableCell>
-                <TableCell>
-                  {/* 必要に応じて削除ボタンなどを追加 */}
                 </TableCell>
               </TableRow>
             ))}
@@ -388,11 +253,10 @@ function ManagementPage() {
         onConfirm={handleConfirmAction}
         message={confirmModalMessage}
       />
-
       <CalendarModal
-        open={openCalendarModal}
-        onClose={() => setOpenCalendarModal(false)}
-        applications={approvedApplications}
+        open={calendarModalOpen}
+        onClose={() => setCalendarModalOpen(false)}
+        applications={applications}
       />
     </Box>
   );

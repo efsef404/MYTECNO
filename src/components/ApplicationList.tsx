@@ -16,7 +16,7 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import dayjs from 'dayjs';
-import type { ApplicationData } from '../pages/ApplicationPage';
+import type { ApplicationData } from '../types/ApplicationData';
 
 interface ApplicationListProps {
   applications: ApplicationData[];
@@ -211,7 +211,7 @@ function ApplicationList({ applications, updateApplicationStatus, selectedTab }:
                 <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
                   申請日: {dayjs(app.applicationDate).format('YYYY/MM/DD')} 
                   <br/>
-                  希望日: {dayjs(app.requestedDate).format('YYYY/MM/DD')}
+                  希望日: {dayjs(app.requestedDate).format('YYYY/MM/DD')} {app.startTime} - {app.endTime}
                 </Typography>
               </CardContent>
 
@@ -319,6 +319,12 @@ function ApplicationList({ applications, updateApplicationStatus, selectedTab }:
                       {selectedApplication.requestedDate
                         ? dayjs(selectedApplication.requestedDate).format('YYYY/MM/DD')
                         : '-'}
+                    </Typography>
+                  </Box>
+                  <Box className="detail-row">
+                    <Typography color="text.secondary">時間</Typography>
+                    <Typography>
+                      {selectedApplication.startTime} - {selectedApplication.endTime}
                     </Typography>
                   </Box>
                   <Box className="detail-row">

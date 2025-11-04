@@ -9,6 +9,7 @@ import LoginPage from './pages/LoginPage';
 import ApplicationPage from './pages/ApplicationPage';
 import ApprovalPage from './pages/ApprovalPage';
 import ManagementPage from './pages/ManagementPage';
+import HomePage from './pages/HomePage';
 
 interface DecodedToken {
   id: number;
@@ -74,7 +75,11 @@ function App() {
       <Container maxWidth="lg">
         <Box sx={{ my: 4 }} className="glass-container">
           <Routes>
-            <Route path="/" element={!isLoggedIn ? <LoginPage handleLogin={handleLogin} /> : <Navigate to="/apply" />} />
+            <Route path="/" element={!isLoggedIn ? <LoginPage handleLogin={handleLogin} /> : <Navigate to="/home" />} />
+            <Route
+              path="/home"
+              element={isLoggedIn ? <HomePage /> : <Navigate to="/" />}
+            />
             <Route
               path="/apply"
               element={isLoggedIn ? <ApplicationPage /> : <Navigate to="/" />}

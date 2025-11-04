@@ -122,7 +122,7 @@ app.get('/api/applications/my', authenticateToken, async (req: AuthRequest, res:
     // データ取得クエリ
     const dataQuery = `
       SELECT a.id, u.username, u.department_id, d.name as departmentName, a.application_date as applicationDate, a.requested_date as requestedDate, a.reason, s.name as status,
-             a.processed_at as processedAt, approver.username as approverUsername, approver_department.name as approverDepartmentName, a.is_special_approval as isSpecialApproval
+             a.processed_at as processedAt, approver.username as approverUsername, approver_department.name as approverDepartmentName, a.is_special_approval as isSpecialApproval, a.start_time as startTime, a.end_time as endTime
       FROM applications a
       JOIN application_statuses s ON a.status_id = s.id
       JOIN users u ON a.user_id = u.id
@@ -155,7 +155,7 @@ app.get('/api/applications/my', authenticateToken, async (req: AuthRequest, res:
 
 // 新しい申請を作成
 app.post('/api/applications', authenticateToken, async (req: AuthRequest, res: Response) => {
-  const { applicationDate, requestedDate, reason, isSpecialApproval } = req.body; // isSpecialApprovalを受け取る
+  const { applicationDate, requestedDate, reason, isSpecialApproval, startTime, endTime } = req.body;
   const userId = req.user?.id;
 
   if (!applicationDate || !requestedDate || !reason) {
@@ -165,15 +165,12 @@ app.post('/api/applications', authenticateToken, async (req: AuthRequest, res: R
   let connection;
   try {
     connection = await mysql.createConnection(dbConfig);
-    // 「申請中」のステータスIDを取得 (ここではID=1と仮定)
     const pendingStatusId = 1;
-    // INSERTクエリを修正
-    const query = 'INSERT INTO applications (user_id, application_date, requested_date, reason, status_id, is_special_approval) VALUES (?, ?, ?, ?, ?, ?)';
-    const [result]:[any, any] = await connection.execute(query, [userId, applicationDate, requestedDate, reason, pendingStatusId, isSpecialApproval]);
+    const query = 'INSERT INTO applications (user_id, application_date, requested_date, reason, status_id, is_special_approval, start_time, end_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
+    const [result]:[any, any] = await connection.execute(query, [userId, applicationDate, requestedDate, reason, pendingStatusId, isSpecialApproval, startTime, endTime]);
 
     const newApplicationId = result.insertId;
-    // SELECTクエリも修正 (is_special_approvalを取得)
-    const [rows]:[any[], any] = await connection.execute('SELECT id, user_id, application_date, requested_date, reason, status_id, is_special_approval FROM applications WHERE id = ?', [newApplicationId]);
+    const [rows]:[any[], any] = await connection.execute('SELECT id, user_id, application_date, requested_date, reason, status_id, is_special_approval, start_time, end_time FROM applications WHERE id = ?', [newApplicationId]);
 
     await connection.end();
     res.status(201).json(rows[0]);
@@ -211,7 +208,7 @@ app.get('/api/admin/applications', [authenticateToken, adminOnly], async (req: A
     // データ取得クエリ (LIMITとOFFSET、WHERE句を追加)
     const dataQuery = `
       SELECT a.id, u.username, u.department_id, d.name as departmentName, a.application_date as applicationDate, a.requested_date as requestedDate, a.reason, s.name as status,
-             a.processed_at as processedAt, approver.username as approverUsername, approver_department.name as approverDepartmentName, a.is_special_approval as isSpecialApproval
+             a.processed_at as processedAt, approver.username as approverUsername, approver_department.name as approverDepartmentName, a.is_special_approval as isSpecialApproval, a.start_time as startTime, a.end_time as endTime
       FROM applications a
       JOIN application_statuses s ON a.status_id = s.id
       JOIN users u ON a.user_id = u.id
@@ -271,7 +268,7 @@ app.get('/api/approver/applications', [authenticateToken, approverOrAdminOnly], 
     // データ取得クエリ
     const dataQuery = `
       SELECT a.id, u.username, u.department_id, d.name as departmentName, a.application_date as applicationDate, a.requested_date as requestedDate, a.reason, s.name as status,
-             a.processed_at as processedAt, approver.username as approverUsername, approver_department.name as approverDepartmentName, a.is_special_approval as isSpecialApproval
+             a.processed_at as processedAt, approver.username as approverUsername, approver_department.name as approverDepartmentName, a.is_special_approval as isSpecialApproval, a.start_time as startTime, a.end_time as endTime
       FROM applications a
       JOIN application_statuses s ON a.status_id = s.id
       JOIN users u ON a.user_id = u.id
@@ -334,10 +331,19 @@ app.put('/api/applications/:id/status', [authenticateToken, approverOrAdminOnly]
       return res.status(404).json({ message: '指定された申請が見つかりません。' });
     }
 
+    // ステータスが「承認」の場合、ユーザーの在宅勤務回数をインクリメント
+    if (newStatus === '承認') {
+      const [appRows]: [any[], any] = await connection.execute('SELECT user_id FROM applications WHERE id = ?', [id]);
+      if (appRows.length > 0) {
+        const userId = appRows[0].user_id;
+        await connection.execute('UPDATE users SET remote_work_count = remote_work_count + 1 WHERE id = ?', [userId]);
+      }
+    }
+
     // 更新された申請データを取得して返す
     const [updatedRows]: [any[], any] = await connection.execute(
       `SELECT a.id, u.username, u.department_id, d.name as departmentName, a.application_date as applicationDate, a.requested_date as requestedDate, a.reason, s.name as status,
-              a.processed_at as processedAt, approver.username as approverUsername, approver_department.name as approverDepartmentName, a.is_special_approval as isSpecialApproval
+              a.processed_at as processedAt, approver.username as approverUsername, approver_department.name as approverDepartmentName, a.is_special_approval as isSpecialApproval, a.start_time as startTime, a.end_time as endTime
        FROM applications a
        JOIN application_statuses s ON a.status_id = s.id
        JOIN users u ON a.user_id = u.id
@@ -463,6 +469,32 @@ app.get('/api/departments', authenticateToken, async (_req: AuthRequest, res: Re
     console.error('Get Departments API Error:', error);
     if (connection) await connection.end();
     res.status(500).json({ message: '部署一覧の取得に失敗しました。' });
+  }
+});
+
+// ユーザーの統計情報を取得
+app.get('/api/user/stats', authenticateToken, async (req: AuthRequest, res: Response) => {
+  let connection;
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.sendStatus(401);
+    }
+
+    connection = await mysql.createConnection(dbConfig);
+    const [rows]: [any[], any] = await connection.execute('SELECT username, remote_work_count FROM users WHERE id = ?', [userId]);
+
+    if (rows.length === 0) {
+      await connection.end();
+      return res.status(404).json({ message: 'ユーザーが見つかりません。' });
+    }
+
+    await connection.end();
+    res.json(rows[0]);
+  } catch (error) {
+    console.error('Get User Stats API Error:', error);
+    if (connection) await connection.end();
+    res.status(500).json({ message: 'ユーザー統計の取得に失敗しました。' });
   }
 });
 

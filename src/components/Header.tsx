@@ -69,6 +69,18 @@ function Header({ isLoggedIn, handleLogout, userRole, username, departmentName }
             <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 1, alignItems: 'center' }}>
               <Button 
                 component={Link} 
+                to="/home"
+                sx={{
+                  color: 'text.primary',
+                  '&:hover': {
+                    backgroundColor: 'action.hover',
+                  }
+                }}
+              >
+                ホーム
+              </Button>
+              <Button 
+                component={Link} 
                 to="/apply"
                 sx={{
                   color: 'text.primary',
@@ -164,6 +176,7 @@ function Header({ isLoggedIn, handleLogout, userRole, username, departmentName }
                     </Typography>
                   </Box>
                 </MenuItem>
+                <MenuItem component={Link} to="/home">ホーム</MenuItem>
                 <MenuItem component={Link} to="/apply">申請</MenuItem>
                 {(userRole === '承認者' || userRole === '管理者') && (
                   <MenuItem component={Link} to="/approve">承認</MenuItem>
