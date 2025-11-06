@@ -19,6 +19,7 @@ import dayjs from 'dayjs';
 import type { ApplicationData } from '../types/ApplicationData';
 
 interface ApplicationListProps {
+  title: string;
   applications: ApplicationData[];
   updateApplicationStatus?: (id: number, newStatus: ApplicationData['status']) => void;
   selectedTab?: 'pending' | 'processed';
@@ -100,7 +101,7 @@ const modalStyle = {
   outline: 'none',
 };
 
-function ApplicationList({ applications, updateApplicationStatus, selectedTab }: ApplicationListProps) {
+function ApplicationList({ title, applications, updateApplicationStatus, selectedTab }: ApplicationListProps) {
   const [openModal, setOpenModal] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState<ApplicationData | null>(null);
   const [confirmModal, setConfirmModal] = useState<{
@@ -145,7 +146,7 @@ function ApplicationList({ applications, updateApplicationStatus, selectedTab }:
             },
           }}
         >
-          自分の申請一覧
+          {title}
         </Typography>
       </Box>
 

@@ -114,7 +114,7 @@ function ApplicationPage() {
       </Typography>
       <ApplicationForm addApplication={addApplication} />
       <Box sx={{ mt: 5 }}>
-        <ApplicationList applications={applications} />
+        <ApplicationList title="自分の申請一覧" applications={applications} />
         {pageCount > 1 && (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3, gap: 2 }}>
             <Typography>

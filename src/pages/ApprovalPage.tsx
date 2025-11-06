@@ -1,8 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Pagination, Tabs, Tab } from '@mui/material';
 import ApplicationList from '../components/ApplicationList';
-import type { ApplicationData } from './ApplicationPage'; // 型定義をインポート
+import type { ApplicationData } from '../types/ApplicationData'; // 型定義をインポート
 import dayjs from 'dayjs';
+import { jwtDecode } from 'jwt-decode';
+
+interface DecodedToken {
+  id: number;
+  username: string;
+  role: string;
+  departmentName: string;
+  iat: number;
+  exp: number;
+}
 
 function ApprovalPage() {
   const [applications, setApplications] = useState<ApplicationData[]>([]);
@@ -19,6 +29,13 @@ function ApprovalPage() {
     setError('');
     try {
       const token = localStorage.getItem('token');
+       if (!token) {
+        setError("認証トークンがありません。");
+        return;
+      }
+      const decodedToken: DecodedToken = jwtDecode(token);
+      const currentUsername = decodedToken.username;
+
       let apiUrl = `http://localhost:3001/api/approver/applications?page=${fetchPage}&limit=${limit}`;
       if (statusFilter === 'pending') {
         apiUrl += '&status=pending';
@@ -39,15 +56,21 @@ function ApprovalPage() {
       }
 
       const { applications: fetchedApplications, totalCount: fetchedTotalCount } = await response.json();
+      
+      // 自分の申請を除外する
+      const filteredApplications = fetchedApplications.filter(
+        (app: ApplicationData) => app.username !== currentUsername
+      );
+
       // 日付のフォーマットを整える
-      const formattedData = fetchedApplications.map((app: ApplicationData) => ({
+      const formattedData = filteredApplications.map((app: ApplicationData) => ({
         ...app,
         applicationDate: app.applicationDate ? dayjs(app.applicationDate).format('YYYY/MM/DD HH:mm') : '',
         requestedDate: app.requestedDate ? dayjs(app.requestedDate).format('YYYY/MM/DD') : '',
         processedAt: app.processedAt ? dayjs(app.processedAt).format('YYYY/MM/DD HH:mm') : null,
       }));
       setApplications(formattedData);
-      setTotalCount(fetchedTotalCount);
+      setTotalCount(fetchedTotalCount - (fetchedApplications.length - filteredApplications.length));
 
     } catch (err: any) {
       setError(err.message);
@@ -109,7 +132,7 @@ function ApprovalPage() {
       </Box>
 
       {error && <p style={{ color: 'red' }}>{error}</p>} 
-      <ApplicationList applications={applications} updateApplicationStatus={updateApplicationStatus} selectedTab={selectedTab} />
+      <ApplicationList title="承認待ち一覧" applications={applications} updateApplicationStatus={updateApplicationStatus} selectedTab={selectedTab} />
       {pageCount > 1 && (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3, gap: 2 }}>
           <Typography>
