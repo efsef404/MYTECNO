@@ -70,7 +70,7 @@ function ApprovalPage() {
         processedAt: app.processedAt ? dayjs(app.processedAt).format('YYYY/MM/DD HH:mm') : null,
       }));
       setApplications(formattedData);
-      setTotalCount(fetchedTotalCount - (fetchedApplications.length - filteredApplications.length));
+      setTotalCount(fetchedTotalCount);
 
     } catch (err: any) {
       setError(err.message);
