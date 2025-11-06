@@ -16,7 +16,7 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import dayjs from 'dayjs';
-import type { ApplicationData } from '../types/ApplicationData';
+import type { ApplicationData } from '../../types/ApplicationData';
 
 interface ApplicationListProps {
   title: string;

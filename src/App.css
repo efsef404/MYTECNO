@@ -4,125 +4,15 @@
   flex-direction: column;
 }
 
-/* アプリケーションのレイアウト */
-.app-layout {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-lg);
-  padding: var(--spacing-lg);
-}
 
-/* 申請フォーム */
-.application-form {
-  max-width: 600px;
-  margin: 0 auto;
-  width: 100%;
-}
 
-.form-group {
-  margin-bottom: var(--spacing-md);
-}
 
-.form-group label {
-  display: block;
-  margin-bottom: var(--spacing-xs);
-  color: var(--text-secondary);
-  font-weight: 500;
-}
 
-/* 申請リスト */
-.application-list {
-  display: grid;
-  gap: var(--spacing-md);
-}
 
-.application-item {
-  padding: var(--spacing-lg);
-  border-radius: var(--border-radius);
-  background-color: rgba(255, 255, 255, 0.15); /* Transparent background */
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1); /* Subtle shadow */
-  backdrop-filter: blur(5px); /* Frosted glass effect */
-  -webkit-backdrop-filter: blur(5px); /* Safari support */
-  border: 1px solid rgba(255, 255, 255, 0.3); /* Subtle border */
-  transition: all 0.2s ease;
-}
 
-.application-item:hover {
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2); /* Slightly stronger shadow on hover */
-  transform: translateY(-2px);
-  background-color: rgba(255, 255, 255, 0.25); /* Slightly less transparent on hover */
-}
 
-/* ステータスバッジ */
-.status-badge {
-  display: inline-block;
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--border-radius);
-  font-size: 0.875rem;
-  font-weight: 500;
-}
 
-.status-pending {
-  background-color: rgba(254, 243, 199, 0.7); /* Transparent version */
-  color: #92400e;
-}
 
-.status-approved {
-  background-color: rgba(220, 252, 231, 0.7); /* Transparent version */
-  color: #166534;
-}
-
-.status-rejected {
-  background-color: rgba(254, 226, 226, 0.7); /* Transparent version */
-  color: #991b1b;
-}
-
-/* ページヘッダー */
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-lg);
-}
-
-.page-title {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-/* テーブルスタイル */
-.table-container {
-  overflow-x: auto;
-  background-color: rgba(255, 255, 255, 0.15); /* Transparent background */
-  border-radius: var(--border-radius);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1); /* Subtle shadow */
-  backdrop-filter: blur(5px); /* Frosted glass effect */
-  -webkit-backdrop-filter: blur(5px); /* Safari support */
-  border: 1px solid rgba(255, 255, 255, 0.3); /* Subtle border */
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th, td {
-  padding: var(--spacing-md);
-  text-align: left;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.3); /* Transparent border */
-}
-
-th {
-  background-color: rgba(255, 255, 255, 0.2); /* Transparent background */
-  font-weight: 500;
-  color: white; /* Adjust text color */
-}
-
-tr:hover {
-  background-color: rgba(255, 255, 255, 0.1); /* Slightly less transparent on hover */
-}
 
 /* ロゴ関連（既存のスタイルを保持） */
 .logo {
@@ -155,24 +45,4 @@ tr:hover {
   }
 }
 
-/* レスポンシブデザイン */
-@media (max-width: 768px) {
-  .app-layout {
-    padding: var(--spacing-md);
-  }
 
-  .application-form {
-    padding: var(--spacing-md);
-  }
-
-  .page-header {
-    flex-direction: column;
-    gap: var(--spacing-md);
-    align-items: flex-start;
-  }
-
-  .table-container {
-    margin: 0 calc(-1 * var(--spacing-md));
-    border-radius: 0;
-  }
-}

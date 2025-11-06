@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Pagination, Tabs, Tab } from '@mui/material';
-import ApplicationList from '../components/ApplicationList';
+import ApplicationList from '../components/applications/ApplicationList';
 import type { ApplicationData } from '../types/ApplicationData'; // 型定義をインポート
 import dayjs from 'dayjs';
 import { jwtDecode } from 'jwt-decode';

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Pagination, Typography } from '@mui/material';
-import ApplicationForm from '../components/ApplicationForm';
-import ApplicationList from '../components/ApplicationList';
+import ApplicationForm from './ApplicationPage/components/ApplicationForm';
+import ApplicationList from '../components/applications/ApplicationList';
 import dayjs from 'dayjs';
 import { jwtDecode } from 'jwt-decode';
 import type { ApplicationData } from '../types/ApplicationData';
