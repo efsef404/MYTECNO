@@ -115,6 +115,8 @@ function ApprovalPage() {
     }
   };
 
+  const title = selectedTab === 'pending' ? '承認待ち一覧' : '承認済み一覧';
+
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
@@ -132,7 +134,7 @@ function ApprovalPage() {
       </Box>
 
       {error && <p style={{ color: 'red' }}>{error}</p>} 
-      <ApplicationList title="承認待ち一覧" applications={applications} updateApplicationStatus={updateApplicationStatus} selectedTab={selectedTab} />
+      <ApplicationList title={title} applications={applications} updateApplicationStatus={updateApplicationStatus} selectedTab={selectedTab} />
       {pageCount > 1 && (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3, gap: 2 }}>
           <Typography>
