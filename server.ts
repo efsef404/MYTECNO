@@ -457,6 +457,41 @@ app.put('/api/admin/users/:id/role', [authenticateToken, adminOnly], async (req:
   }
 });
 
+// ユーザーを削除 (管理者専用)
+app.delete('/api/admin/users/:id', [authenticateToken, adminOnly], async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+
+  let connection;
+  try {
+    connection = await mysql.createConnection(dbConfig);
+    await connection.beginTransaction(); // トランザクション開始
+
+    // 関連するアプリケーションを削除
+    await connection.execute('DELETE FROM applications WHERE user_id = ?', [id]);
+
+    // ユーザーを削除
+    const query = 'DELETE FROM users WHERE id = ?';
+    const [result]: any = await connection.execute(query, [id]);
+
+    if (result.affectedRows === 0) {
+      await connection.rollback(); // 変更をロールバック
+      await connection.end();
+      return res.status(404).json({ message: '指定されたユーザーが見つかりません。' });
+    }
+
+    await connection.commit(); // 変更をコミット
+    await connection.end();
+    res.json({ message: 'ユーザーと関連データが削除されました。' });
+  } catch (error) {
+    console.error('Delete User API Error:', error);
+    if (connection) {
+      await connection.rollback(); // エラー発生時はロールバック
+      await connection.end();
+    }
+    res.status(500).json({ message: 'ユーザーの削除に失敗しました。' });
+  }
+});
+
 // 部署一覧を取得
 app.get('/api/departments', authenticateToken, async (_req: AuthRequest, res: Response) => {
   let connection;

@@ -24,6 +24,18 @@ interface UserData {
   departmentId: number | null;
 }
 
+const modalStyle = {
+  position: 'absolute' as 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  width: 400,
+  bgcolor: 'background.paper',
+  border: '2px solid #000',
+  boxShadow: 24,
+  p: 4,
+};
+
 function ManagementPage({ handleLogout }: ManagementPageProps) {
   const [users, setUsers] = useState<UserData[]>([]);
   const [error, setError] = useState('');
@@ -38,6 +50,12 @@ function ManagementPage({ handleLogout }: ManagementPageProps) {
   const [newDepartmentId, setNewDepartmentId] = useState<string>('');
   const [userFormError, setUserFormError] = useState('');
   const [userFormSuccess, setUserFormSuccess] = useState('');
+
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredUsers = users.filter(user =>
+    user.username.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const [open, setOpen] = useState(false);
   const handleOpen = () => setOpen(true);
@@ -54,15 +72,35 @@ function ManagementPage({ handleLogout }: ManagementPageProps) {
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmModalMessage, setConfirmModalMessage] = useState('');
   const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
+  const [deleteCountdown, setDeleteCountdown] = useState(0);
 
-  const handleOpenConfirmModal = (message: string, action: () => void) => {
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
+  const [newRole, setNewRole] = useState<UserData['role']>('社員');
+  const [newDepartmentIdForModal, setNewDepartmentIdForModal] = useState<number | null>(null);
+
+  const openEditModal = (user: UserData) => {
+    setSelectedUser(user);
+    setNewRole(user.role);
+    setNewDepartmentIdForModal(user.departmentId);
+    setEditModalOpen(true);
+  };
+
+  const closeEditModal = () => {
+    setSelectedUser(null);
+    setEditModalOpen(false);
+  };
+
+  const handleOpenConfirmModal = (message: string, action: () => void, countdown: number = 0) => {
     setConfirmModalMessage(message);
     setConfirmAction(() => action);
+    setDeleteCountdown(countdown);
     setConfirmModalOpen(true);
   };
   const handleCloseConfirmModal = () => {
     setConfirmModalOpen(false);
     setConfirmAction(null);
+    setDeleteCountdown(0); // モーダルが閉じたらカウントダウンをリセット
   };
   const handleConfirmAction = () => {
     if (confirmAction) confirmAction();
@@ -186,6 +224,33 @@ function ManagementPage({ handleLogout }: ManagementPageProps) {
     );
   };
 
+  const handleDeleteUser = (userId: number, username: string) => {
+    handleOpenConfirmModal(
+      `ユーザー '${username}' を本当に削除しますか？この操作は元に戻せません。`,
+      async () => {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await fetch(`http://localhost:3001/api/admin/users/${userId}`,
+            {
+              method: 'DELETE',
+              headers: { 'Authorization': `Bearer ${token}` },
+            }
+          );
+          if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.message || 'ユーザーの削除に失敗しました。');
+          }
+          fetchAllUsers();
+          closeEditModal(); // 削除成功後に編集モーダルを閉じる
+        } catch (err: any) {
+          setError(err.message);
+        }
+      },
+      5 // 5秒のカウントダウン
+    );
+  };
+
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -217,6 +282,14 @@ function ManagementPage({ handleLogout }: ManagementPageProps) {
 
       {error && <Typography color="error" sx={{ mt: 2 }}>{error}</Typography>}
 
+      <TextField
+        label="社員を検索"
+        variant="outlined"
+        fullWidth
+        margin="normal"
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+
       <TableContainer component={Paper} sx={{ mt: 3 }}>
         <Table>
           <TableHead>
@@ -225,44 +298,17 @@ function ManagementPage({ handleLogout }: ManagementPageProps) {
               <TableCell>ユーザー名</TableCell>
               <TableCell>部署</TableCell>
               <TableCell>役割</TableCell>
+              <TableCell>操作</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {users.map(user => (
-              <TableRow key={user.id}>
+            {filteredUsers.map(user => (
+              <TableRow key={user.id} onClick={() => openEditModal(user)} sx={{ cursor: 'pointer' }}>
                 <TableCell>{user.id}</TableCell>
                 <TableCell>{user.username}</TableCell>
-                <TableCell>
-                  <FormControl size="small" fullWidth>
-                    <Select
-                      value={user.departmentId ? user.departmentId.toString() : ''}
-                      onChange={(e) =>
-                        handleUpdateUser(user.id, user.role, Number(e.target.value) || null)
-                      }
-                    >
-                      <MenuItem value=""><em>なし</em></MenuItem>
-                      {departments.map((dept) => (
-                        <MenuItem key={dept.id} value={dept.id.toString()}>
-                          {dept.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </TableCell>
-                <TableCell>
-                  <FormControl size="small">
-                    <Select
-                      value={user.role}
-                      onChange={(e) =>
-                        handleUpdateUser(user.id, e.target.value as UserData['role'], user.departmentId)
-                      }
-                    >
-                      <MenuItem value="社員">社員</MenuItem>
-                      <MenuItem value="承認者">承認者</MenuItem>
-                      <MenuItem value="管理者">管理者</MenuItem>
-                    </Select>
-                  </FormControl>
-                </TableCell>
+                <TableCell>{user.departmentName || 'なし'}</TableCell>
+                <TableCell>{user.role}</TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}></TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -274,12 +320,82 @@ function ManagementPage({ handleLogout }: ManagementPageProps) {
         onClose={handleCloseConfirmModal}
         onConfirm={handleConfirmAction}
         message={confirmModalMessage}
+        countdown={deleteCountdown} // deleteCountdown stateを渡す
       />
       <CalendarModal
         open={calendarModalOpen}
         onClose={() => setCalendarModalOpen(false)}
         applications={applications}
       />
+
+      {/* ユーザー編集モーダル */}
+      <Modal open={editModalOpen} onClose={closeEditModal}>
+        <Box sx={modalStyle}>
+          <Typography variant="h6">ユーザー情報編集</Typography>
+          {selectedUser && (
+            <>
+              <Typography variant="subtitle1" sx={{ mt: 2 }}>
+                ユーザー名: {selectedUser.username}
+              </Typography>
+              <FormControl fullWidth sx={{ mt: 2 }}>
+                <InputLabel>役割</InputLabel>
+                <Select
+                  value={newRole}
+                  label="役割"
+                  onChange={(e) => setNewRole(e.target.value as UserData['role'])}
+                >
+                  <MenuItem value="社員">社員</MenuItem>
+                  <MenuItem value="承認者">承認者</MenuItem>
+                  <MenuItem value="管理者">管理者</MenuItem>
+                </Select>
+              </FormControl>
+              <FormControl fullWidth sx={{ mt: 2 }}>
+                <InputLabel>部署</InputLabel>
+                <Select
+                  value={newDepartmentIdForModal ? newDepartmentIdForModal.toString() : ''}
+                  label="部署"
+                  onChange={(e) =>
+                    setNewDepartmentIdForModal(Number(e.target.value) || null)
+                  }
+                >
+                  <MenuItem value=""><em>なし</em></MenuItem>
+                  {departments.map((dept) => (
+                    <MenuItem key={dept.id} value={dept.id.toString()}>
+                      {dept.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Button
+                variant="contained"
+                color="primary"
+                sx={{ mt: 3, mr: 2 }}
+                onClick={() => {
+                  if (selectedUser) {
+                    handleUpdateUser(selectedUser.id, newRole, newDepartmentIdForModal);
+                    closeEditModal();
+                  }
+                }}
+              >
+                保存
+              </Button>
+              <Button
+                variant="outlined"
+                color="secondary"
+                sx={{ mt: 3 }}
+                onClick={() => {
+                  if (selectedUser) {
+                    handleDeleteUser(selectedUser.id, selectedUser.username);
+                  }
+                }}
+              >
+                削除
+              </Button>
+            </>
+          )}
+        </Box>
+      </Modal>
+
     </Box>
   );
 }
