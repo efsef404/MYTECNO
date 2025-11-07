@@ -10,6 +10,12 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import CalendarModal from '../components/CalendarModal';
 import type { ApplicationData } from '../types/ApplicationData';
 
+import { jwtDecode } from 'jwt-decode';
+
+interface ManagementPageProps {
+  handleLogout: () => void;
+}
+
 interface UserData {
   id: number;
   username: string;
@@ -18,12 +24,13 @@ interface UserData {
   departmentId: number | null;
 }
 
-function ManagementPage() {
+function ManagementPage({ handleLogout }: ManagementPageProps) {
   const [users, setUsers] = useState<UserData[]>([]);
   const [error, setError] = useState('');
   const [departments, setDepartments] = useState<{ id: number; name: string }[]>([]);
   const [applications, setApplications] = useState<ApplicationData[]>([]);
   const [calendarModalOpen, setCalendarModalOpen] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -166,7 +173,12 @@ function ManagementPage() {
             body: JSON.stringify({ newRole, departmentId: newDepartmentId }),
           });
           if (!response.ok) throw new Error('ユーザー情報の更新に失敗しました。');
-          fetchAllUsers();
+
+          if (userId === currentUserId) {
+            handleLogout();
+          } else {
+            fetchAllUsers();
+          }
         } catch (err: any) {
           setError(err.message);
         }
@@ -175,6 +187,16 @@ function ManagementPage() {
   };
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const decodedToken: { id: number } = jwtDecode(token);
+        setCurrentUserId(decodedToken.id);
+      } catch (error) {
+        console.error('Invalid token:', error);
+      }
+    }
+
     fetchAllUsers();
     fetchDepartments();
     fetchAllApplications();

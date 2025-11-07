@@ -90,7 +90,7 @@ function App() {
             />
             <Route
               path="/manage"
-              element={isLoggedIn && userRole === '管理者' ? <ManagementPage /> : <Navigate to="/apply" />}
+              element={isLoggedIn && userRole === '管理者' ? <ManagementPage handleLogout={handleLogout} /> : <Navigate to="/apply" />}
             />
           </Routes>
         </Box>
