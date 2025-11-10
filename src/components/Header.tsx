@@ -122,13 +122,10 @@ function Header({ isLoggedIn, handleLogout, userRole, username, departmentName }
                 </Button>
               )}
 
-              <Tooltip title="アカウント設定">
-                <IconButton onClick={handleMenuOpen} size="small">
-                  <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
-                    {username ? username[0] : 'U'}
-                  </Avatar>
-                </IconButton>
-              </Tooltip>
+              <Typography sx={{ color: 'text.primary' }}>
+                {departmentName && username ? `${departmentName} ${username}さん` :
+                 username ? `${username}さん` : 'Unknown User'}
+              </Typography>
 
               <Menu
                 anchorEl={anchorEl}
