@@ -4,9 +4,8 @@
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  /* background-color: #242424; */ /* Removed default background */
+  color-scheme: light; /* Light color scheme */
+  color: #213547; /* Light mode text color */
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -20,106 +19,16 @@ a {
   text-decoration: inherit;
 }
 a:hover {
-  color: #535bf2;
+  color: #747bff;
 }
 
 body {
   margin: 0;
-  /* display: flex; */ /* Remove flex to allow normal block flow */
-  /* place-items: center; */ /* Remove centering */
   min-width: 320px;
   min-height: 100vh;
-  background-image: url('https://source.unsplash.com/random/1920x1080/?abstract,nature'); /* Random background for glass effect */
-  background-size: cover;
-  background-attachment: fixed;
-  background-position: center;
-  /* overflow: hidden; */ /* Remove to allow scrolling */
 }
 
 #root {
   width: 100%;
-  /* height: 100%; */ /* Remove fixed height to allow content to dictate height */
-  /* display: flex; */ /* Remove flex */
-  /* justify-content: center; */ /* Remove centering */
-  /* align-items: center; */ /* Remove centering */
 }
 
-.glass-container {
-  background: rgba(255, 255, 255, 0.15); /* Transparent background */
-  border-radius: 16px;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px); /* Frosted glass effect */
-  -webkit-backdrop-filter: blur(10px); /* Safari support */
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  padding: 20px;
-  margin: 20px;
-  max-width: 90%;
-  max-height: 90%;
-  overflow-y: auto;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-  color: #fff; /* Adjust text color for better contrast */
-  text-shadow: 0 0 5px rgba(0,0,0,0.5);
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.3); /* Transparent border */
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: rgba(255, 255, 255, 0.2); /* Transparent button background */
-  cursor: pointer;
-  transition: all 0.25s;
-  color: #fff; /* Adjust text color */
-}
-button:hover {
-  border-color: #646cff;
-  background-color: rgba(255, 255, 255, 0.3);
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    /* background-color: #ffffff; */ /* Removed default background */
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: rgba(255, 255, 255, 0.8); /* Lighter transparent button for light mode */
-    color: #213547;
-  }
-  .glass-container {
-    background: rgba(255, 255, 255, 0.8); /* Lighter transparent background for light mode */
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.8);
-  }
-  h1 {
-    color: #213547;
-    text-shadow: none;
-  }
-}
-
-input {
-  padding: 0.5em;
-  margin: 0.5em 0;
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.3); /* Transparent border */
-  background-color: rgba(255, 255, 255, 0.1); /* Transparent input background */
-  color: #fff; /* Adjust text color */
-}
-input:focus {
-  border-color: #646cff;
-  outline: none;
-}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CssBaseline, Box, Container } from '@mui/material';
+import { Box, Container } from '@mui/material';
 import Sidebar from './components/Sidebar';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
@@ -79,7 +79,6 @@ function App() {
 
   return (
     <Router>
-      <CssBaseline />
       <Box sx={{ display: 'flex' }}>
         {isLoggedIn && (
           <Sidebar
@@ -110,7 +109,19 @@ function App() {
           }}
         >
           <Container maxWidth="lg" sx={{ mt: 4, p: 3, width: '100%' }}>
-            <Box className="glass-container">
+            <Box sx={{
+              background: 'rgba(255, 255, 255, 0.8)', // Lighter transparent background for light mode
+              borderRadius: '16px',
+              boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.8)', // Lighter border
+              padding: '20px',
+              margin: '20px',
+              maxWidth: '90%',
+              maxHeight: '90%',
+              overflowY: 'auto',
+            }}>
               <Routes>
                 <Route
                   path="/"
