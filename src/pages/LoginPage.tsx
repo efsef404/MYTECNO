@@ -90,7 +90,7 @@ function LoginPage({ handleLogin }: LoginPageProps) {
   if (isLoading && welcomeMessage) {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
-        <Typography variant="h4" component="h1" gutterBottom>
+        <Typography variant="h4" component="h1" >
           {welcomeMessage}
         </Typography>
         <CircularProgress sx={{ mt: 3 }} />
@@ -101,7 +101,7 @@ function LoginPage({ handleLogin }: LoginPageProps) {
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
       <Paper sx={{ p: 4, maxWidth: 400, width: '100%' }}>
-        <Typography variant="h4" component="h1" gutterBottom align="center">
+        <Typography variant="h4"  align="center">
           ログイン
         </Typography>
         <form onSubmit={onLogin}>
