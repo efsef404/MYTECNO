@@ -365,7 +365,6 @@ function ManagementPage({ handleLogout }: ManagementPageProps) {
                     setNewDepartmentIdForModal(Number(e.target.value) || null)
                   }
                 >
-                  <MenuItem value=""><em>なし</em></MenuItem>
                   {departments.map((dept) => (
                     <MenuItem key={dept.id} value={dept.id.toString()}>
                       {dept.name}
@@ -373,33 +372,91 @@ function ManagementPage({ handleLogout }: ManagementPageProps) {
                   ))}
                 </Select>
               </FormControl>
-              <Button
-                variant="contained"
-                color="primary"
-                sx={{ mt: 3, mr: 2 }}
-                onClick={() => {
-                  if (selectedUser) {
-                    handleUpdateUser(selectedUser.id, newRole, newDepartmentIdForModal);
-                    closeEditModal();
-                  }
-                }}
-              >
-                保存
-              </Button>
-              <Button
-                variant="outlined"
-                color="secondary"
-                sx={{ mt: 3 }}
-                onClick={() => {
-                  if (selectedUser) {
-                    handleDeleteUser(selectedUser.id, selectedUser.username);
-                  }
-                }}
-              >
-                削除
-              </Button>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  onClick={() => {
+                    if (selectedUser) {
+                      handleDeleteUser(selectedUser.id, selectedUser.username);
+                    }
+                  }}
+                >
+                  社員の削除
+                </Button>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => {
+                    if (selectedUser) {
+                      handleUpdateUser(selectedUser.id, newRole, newDepartmentIdForModal);
+                      closeEditModal();
+                    }
+                  }}
+                >
+                  保存
+                </Button>
+              </Box>
             </>
           )}
+        </Box>
+      </Modal>
+
+      {/* 社員新規登録モーダル */}
+      <Modal open={open} onClose={handleClose}>
+        <Box sx={modalStyle}>
+          <Typography variant="h6">社員新規登録</Typography>
+          <TextField
+            label="ユーザー名"
+            fullWidth
+            margin="normal"
+            value={newUsername}
+            onChange={(e) => setNewUsername(e.target.value)}
+          />
+          <TextField
+            label="パスワード"
+            type="password"
+            fullWidth
+            margin="normal"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+          />
+          <FormControl fullWidth margin="normal">
+            <InputLabel>役割</InputLabel>
+            <Select
+              value={newUserRole}
+              label="役割"
+              onChange={(e) => setNewUserRole(e.target.value as '社員' | '承認者' | '管理者')}
+            >
+              <MenuItem value="社員">社員</MenuItem>
+              <MenuItem value="承認者">承認者</MenuItem>
+              <MenuItem value="管理者">管理者</MenuItem>
+            </Select>
+          </FormControl>
+          <FormControl fullWidth margin="normal">
+            <InputLabel>部署</InputLabel>
+            <Select
+              value={newDepartmentId}
+              label="部署"
+              onChange={(e) => setNewDepartmentId(e.target.value)}
+            >
+              {departments.map((dept) => (
+                <MenuItem key={dept.id} value={dept.id.toString()}>
+                  {dept.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          {userFormError && <Typography color="error">{userFormError}</Typography>}
+          {userFormSuccess && <Typography color="primary">{userFormSuccess}</Typography>}
+          <Button
+            variant="contained"
+            color="primary"
+            sx={{ mt: 2 }}
+            onClick={handleAddUser}
+          >
+            登録
+          </Button>
         </Box>
       </Modal>
 
