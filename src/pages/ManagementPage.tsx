@@ -298,17 +298,24 @@ function ManagementPage({ handleLogout }: ManagementPageProps) {
               <TableCell>ユーザー名</TableCell>
               <TableCell>部署</TableCell>
               <TableCell>役割</TableCell>
-              <TableCell>操作</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredUsers.map(user => (
-              <TableRow key={user.id} onClick={() => openEditModal(user)} sx={{ cursor: 'pointer' }}>
+              <TableRow
+                key={user.id}
+                onClick={() => openEditModal(user)}
+                sx={{
+                  cursor: 'pointer',
+                  '&:hover': {
+                    backgroundColor: (theme) => theme.palette.action.hover,
+                  },
+                }}
+              >
                 <TableCell>{user.id}</TableCell>
                 <TableCell>{user.username}</TableCell>
                 <TableCell>{user.departmentName || 'なし'}</TableCell>
                 <TableCell>{user.role}</TableCell>
-                <TableCell onClick={(e) => e.stopPropagation()}></TableCell>
               </TableRow>
             ))}
           </TableBody>
