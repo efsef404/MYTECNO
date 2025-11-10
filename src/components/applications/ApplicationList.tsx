@@ -213,7 +213,7 @@ function ApplicationList({ title, applications, updateApplicationStatus, selecte
                 <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
                   申請日: {dayjs(app.applicationDate).format('YYYY/MM/DD')} 
                   <br/>
-                  希望日: {dayjs(app.requestedDate).format('YYYY/MM/DD')} {app.startTime} - {app.endTime}
+                  希望日: {dayjs(app.requestedDate).format('YYYY/MM/DD')} {app.startTime && app.endTime ? `${dayjs(app.startTime, 'HH:mm:ss').format('HH:mm')} - ${dayjs(app.endTime, 'HH:mm:ss').format('HH:mm')}` : '終日'}
                 </Typography>
               </CardContent>
 
@@ -326,7 +326,7 @@ function ApplicationList({ title, applications, updateApplicationStatus, selecte
                   <Box className="detail-row">
                     <Typography color="text.secondary">時間</Typography>
                     <Typography>
-                      {selectedApplication.startTime} - {selectedApplication.endTime}
+                      {selectedApplication.startTime && selectedApplication.endTime ? `${dayjs(selectedApplication.startTime, 'HH:mm:ss').format('HH:mm')} - ${dayjs(selectedApplication.endTime, 'HH:mm:ss').format('HH:mm')}` : '終日'}
                     </Typography>
                   </Box>
                   <Box className="detail-row">
