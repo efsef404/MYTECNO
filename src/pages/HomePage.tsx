@@ -73,7 +73,7 @@ function HomePage() {
           <Button variant="contained" onClick={() => setCalendarOpen(true)}>
             カレンダー表示
           </Button>
-          <Button component={Link} to="/apply" variant="contained" color="primary">
+          <Button component={Link} to="/application/new" variant="contained" color="primary">
             申請作成
           </Button>
         </Box>
