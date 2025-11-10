@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Pagination, Typography } from '@mui/material';
-import ApplicationForm from './ApplicationPage/components/ApplicationForm';
-import ApplicationList from '../components/applications/ApplicationList';
+import ApplicationListDisplay from '../components/applications/ApplicationList'; // Renamed import
 import dayjs from 'dayjs';
 import { jwtDecode } from 'jwt-decode';
 import type { ApplicationData } from '../types/ApplicationData';
@@ -15,7 +14,7 @@ interface DecodedToken {
   exp: number;
 }
 
-function ApplicationPage() {
+function ApplicationList() { // Renamed function
   const [applications, setApplications] = useState<ApplicationData[]>([]);
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
@@ -52,40 +51,6 @@ function ApplicationPage() {
     }
   };
 
-  const addApplication = async (
-    reason: string,
-    requestedDate: string,
-    isSpecialApproval: boolean,
-    startTime: string,
-    endTime: string
-  ) => {
-    setError('');
-    try {
-      const token = localStorage.getItem('token');
-      const applicationDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
-
-      const response = await fetch('http://localhost:3001/api/applications', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ reason, applicationDate, requestedDate, isSpecialApproval, startTime, endTime }),
-      });
-
-      if (!response.ok) throw new Error('申請の作成に失敗しました。');
-
-      if (page === 1) {
-        fetchApplications(page);
-      } else {
-        setPage(1);
-      }
-
-    } catch (err: any) {
-      setError(err.message);
-    }
-  };
-
   const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
     setPage(value);
   };
@@ -110,11 +75,10 @@ function ApplicationPage() {
     <Box>
       {error && <p style={{ color: 'red' }}>{error}</p>}
       <Typography variant="h5" gutterBottom>
-        所属部署: {userDepartment}
+        自分の申請一覧 {/* Updated title */}
       </Typography>
-      <ApplicationForm addApplication={addApplication} />
       <Box sx={{ mt: 5 }}>
-        <ApplicationList title="自分の申請一覧" applications={applications} />
+        <ApplicationListDisplay title="自分の申請一覧" applications={applications} />
         {pageCount > 1 && (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3, gap: 2 }}>
             <Typography>
@@ -128,4 +92,4 @@ function ApplicationPage() {
   );
 }
 
-export default ApplicationPage;
+export default ApplicationList;
