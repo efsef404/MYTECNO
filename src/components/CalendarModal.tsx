@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Modal, Box, Typography, Paper, Button, Card, CardContent, Divider, List, ListItem, ListItemText } from '@mui/material';
-import { Close as CloseIcon } from '@mui/icons-material';
+import { Modal, Box, Typography, Paper, Button, Card, CardContent, Divider, Popover, TextField, InputAdornment, Chip } from '@mui/material';
+import { Close as CloseIcon, Search as SearchIcon, Clear as ClearIcon } from '@mui/icons-material';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import dayjs from 'dayjs';
@@ -23,7 +23,10 @@ interface CalendarData {
 
 function CalendarModal({ open, onClose }: CalendarModalProps) {
   const [calendarData, setCalendarData] = useState<CalendarData[]>([]);
+  const [filteredData, setFilteredData] = useState<CalendarData[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -46,18 +49,44 @@ function CalendarModal({ open, onClose }: CalendarModalProps) {
       const data = await response.json();
       console.log('Calendar data received:', data); // デバッグ用ログ
       setCalendarData(data);
+      setFilteredData(data);
     } catch (err: any) {
       console.error('Calendar fetch error:', err); // デバッグ用ログ
       setError(err.message);
     }
   };
 
+  // 検索機能
+  const filterData = (searchTerm: string) => {
+    if (!searchTerm.trim()) {
+      setFilteredData(calendarData);
+      return;
+    }
+
+    const filtered = calendarData.filter(item => {
+      if (!item.details) return false;
+      
+      const details = item.details.split(';;');
+      return details.some(detail => {
+        const [name] = detail.split('|');
+        return name.toLowerCase().includes(searchTerm.toLowerCase());
+      });
+    });
+
+    setFilteredData(filtered);
+  };
+
+  useEffect(() => {
+    filterData(searchTerm);
+  }, [searchTerm, calendarData]);
+
   const getDateData = (date: Date) => {
     const dateStr = dayjs(date).format('YYYY-MM-DD');
-    const found = calendarData.find(d => {
+    const found = filteredData.find(d => {
       // サーバーから返される日付はUTCで返されるため、ローカル時間に変換
       const serverDate = dayjs.utc(d.date).local().format('YYYY-MM-DD');
-      return serverDate === dateStr;
+      const match = serverDate === dateStr;
+      return match;
     });
     return found;
   };
@@ -92,13 +121,14 @@ function CalendarModal({ open, onClose }: CalendarModalProps) {
             boxShadow: 1,
           },
           '.react-calendar__tile': {
-            height: '80px',
+            height: '60px',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'flex-start',
             alignItems: 'center',
-            padding: '8px 4px',
+            padding: '4px 2px',
             position: 'relative',
+            fontSize: '0.75rem',
           },
           '.react-calendar__month-view__days__day': { 
             color: 'black',
@@ -107,14 +137,36 @@ function CalendarModal({ open, onClose }: CalendarModalProps) {
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             color: 'white',
             fontWeight: 'bold',
-            border: '2px solid #5a67d8',
+            border: '1px solid #5a67d8',
             '&:hover': {
               background: 'linear-gradient(135deg, #5a67d8 0%, #6b3fa0 100%)',
-              transform: 'scale(1.05)',
+              transform: 'scale(1.02)',
               transition: 'all 0.2s ease-in-out',
             },
             '&:enabled:focus': {
               background: 'linear-gradient(135deg, #5a67d8 0%, #6b3fa0 100%)',
+            },
+          },
+          '.react-calendar__tile--high-traffic': {
+            background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)',
+            color: 'white',
+            fontWeight: 'bold',
+            border: '2px solid #c44569',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #ee5a24 0%, #c44569 100%)',
+              transform: 'scale(1.02)',
+              transition: 'all 0.2s ease-in-out',
+            },
+          },
+          '.react-calendar__tile--medium-traffic': {
+            background: 'linear-gradient(135deg, #feca57 0%, #ff9ff3 100%)',
+            color: 'black',
+            fontWeight: 'bold',
+            border: '1px solid #f39c12',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #ff9ff3 0%, #f39c12 100%)',
+              transform: 'scale(1.02)',
+              transition: 'all 0.2s ease-in-out',
             },
           },
           '.react-calendar__tile--now': {
@@ -140,6 +192,53 @@ function CalendarModal({ open, onClose }: CalendarModalProps) {
               閉じる
             </Button>
           </Box>
+          
+          {/* 検索バー */}
+          <Box sx={{ mb: 2 }}>
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="社員名で検索..."
+              value={searchTerm}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+                endAdornment: searchTerm && (
+                  <InputAdornment position="end">
+                    <Button
+                      size="small"
+                      onClick={() => setSearchTerm('')}
+                      sx={{ minWidth: 'auto', p: 0.5 }}
+                    >
+                      <ClearIcon />
+                    </Button>
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ 
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                }
+              }}
+            />
+            {searchTerm && (
+              <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Chip 
+                  label={`${filteredData.length}件見つかりました`}
+                  size="small"
+                  color="primary"
+                  variant="outlined"
+                />
+                <Typography variant="caption" color="text.secondary">
+                  検索: "{searchTerm}"
+                </Typography>
+              </Box>
+            )}
+          </Box>
           <Box sx={{ 
             display: 'flex', 
             gap: 2, 
@@ -151,18 +250,38 @@ function CalendarModal({ open, onClose }: CalendarModalProps) {
           }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Box sx={{ 
-                width: 24, 
-                height: 24, 
+                width: 20, 
+                height: 20, 
+                background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)',
+                borderRadius: 1,
+                border: '2px solid #c44569'
+              }} />
+              <Typography variant="body2">高密度 (50人以上)</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{ 
+                width: 20, 
+                height: 20, 
+                background: 'linear-gradient(135deg, #feca57 0%, #ff9ff3 100%)',
+                borderRadius: 1,
+                border: '1px solid #f39c12'
+              }} />
+              <Typography variant="body2">中密度 (10-49人)</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{ 
+                width: 20, 
+                height: 20, 
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 borderRadius: 1,
                 border: '2px solid #5a67d8'
               }} />
-              <Typography variant="body2">在宅勤務あり</Typography>
+              <Typography variant="body2">低密度 (1-9人)</Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Box sx={{ 
-                width: 24, 
-                height: 24, 
+                width: 20, 
+                height: 20, 
                 bgcolor: 'white',
                 borderRadius: 1,
                 border: '1px solid #e0e0e0'
@@ -171,8 +290,8 @@ function CalendarModal({ open, onClose }: CalendarModalProps) {
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Box sx={{ 
-                width: 24, 
-                height: 24, 
+                width: 20, 
+                height: 20, 
                 bgcolor: '#fff3cd',
                 borderRadius: 1,
                 border: '2px solid #ffc107'
@@ -190,133 +309,183 @@ function CalendarModal({ open, onClose }: CalendarModalProps) {
 
         <Calendar 
           locale="ja-JP"
-          onClickDay={(date: Date) => setSelectedDate(date)}
+          onClickDay={(date: Date, event: React.MouseEvent<HTMLButtonElement>) => {
+            console.log('Calendar day clicked:', date);
+            setSelectedDate(date);
+            setAnchorEl(event.currentTarget);
+          }}
           tileClassName={({ date }: { date: Date }) => {
             const data = getDateData(date);
             const hasData = data && data.details;
-            return hasData ? 'react-calendar__tile--has-data' : '';
+            if (!hasData) return '';
+            
+            // 密度レベルに応じてクラスを返す
+            const count = data.count;
+            if (count >= 50) return 'react-calendar__tile--high-traffic';
+            if (count >= 10) return 'react-calendar__tile--medium-traffic';
+            return 'react-calendar__tile--has-data';
           }}
           tileContent={({ date }: { date: Date }) => {
             const data = getDateData(date);
-            return (data && data.details) ? (
+            if (!data || !data.details) return null;
+            
+            const count = data.count;
+            let icon = '🏠';
+            let bgColor = 'rgba(255, 255, 255, 0.3)';
+            
+            // 密度レベルに応じてアイコンと色を変更
+            if (count >= 50) {
+              icon = '🔥';
+              bgColor = 'rgba(255, 255, 255, 0.4)';
+            } else if (count >= 10) {
+              icon = '👥';
+              bgColor = 'rgba(0, 0, 0, 0.2)';
+            }
+            
+            return (
               <Box sx={{ 
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                gap: 0.5,
-                mt: 0.5
+                gap: 0.25,
+                mt: 0.25,
+                cursor: 'pointer'
               }}>
                 <Box sx={{ 
-                  fontSize: '1.2rem',
+                  fontSize: '0.9rem',
                   lineHeight: 1
                 }}>
-                  🏠
+                  {icon}
                 </Box>
                 <Box sx={{ 
-                  fontSize: '0.85rem', 
+                  fontSize: '0.7rem', 
                   fontWeight: 'bold',
-                  bgcolor: 'rgba(255, 255, 255, 0.3)',
-                  px: 1,
+                  bgcolor: bgColor,
+                  px: 0.5,
                   py: 0.25,
-                  borderRadius: 1
+                  borderRadius: 0.5,
+                  minWidth: '20px',
+                  textAlign: 'center'
                 }}>
-                  {data.count}人
+                  {count}
                 </Box>
               </Box>
-            ) : null;
+            );
           }}
         />
 
-        {selectedDate && (() => {
-          const data = getDateData(selectedDate);
-          const details = data ? parseDetails(data.details) : [];
-          return (
-            <Card sx={{ 
-              mt: 3, 
-              background: data 
-                ? 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)'
-                : 'linear-gradient(135deg, #f5f5f515 0%, #e0e0e015 100%)',
-              border: data ? '2px solid #667eea' : '2px solid #e0e0e0',
-              borderRadius: 2
-            }}>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: data ? 'primary.main' : 'text.secondary' }}>
-                    📆 {dayjs(selectedDate).format('YYYY年MM月DD日 (ddd)')}
-                  </Typography>
-                  {data && (
+        <Popover
+          open={Boolean(anchorEl)}
+          anchorEl={anchorEl}
+          onClose={() => {
+            setAnchorEl(null);
+            setSelectedDate(null);
+          }}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'center',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'center',
+          }}
+        >
+          {selectedDate && (() => {
+            const data = getDateData(selectedDate);
+            const details = data ? parseDetails(data.details) : [];
+            console.log('Selected date:', selectedDate, 'Data:', data, 'Details:', details);
+            return (
+              <Card sx={{ 
+                minWidth: 300,
+                maxWidth: 400,
+                background: data 
+                  ? 'linear-gradient(135deg, #667eea15 0%, #764ba215 100%)'
+                  : 'linear-gradient(135deg, #f5f5f515 0%, #e0e0e015 100%)',
+                border: data ? '2px solid #667eea' : '2px solid #e0e0e0',
+                borderRadius: 2,
+                m: 1
+              }}>
+                <CardContent sx={{ pb: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold', color: data ? 'primary.main' : 'text.secondary' }}>
+                      📆 {dayjs(selectedDate).format('MM/DD (ddd)')}
+                    </Typography>
+                    {data && (
+                      <Box sx={{ 
+                        bgcolor: 'primary.main', 
+                        color: 'white', 
+                        px: 1, 
+                        py: 0.25, 
+                        borderRadius: 2,
+                        fontWeight: 'bold',
+                        fontSize: '0.8rem'
+                      }}>
+                        {data.count}人
+                      </Box>
+                    )}
+                  </Box>
+                  <Divider sx={{ my: 1.5 }} />
+                  {data && details.length > 0 ? (
                     <Box sx={{ 
-                      bgcolor: 'primary.main', 
-                      color: 'white', 
-                      px: 1.5, 
-                      py: 0.5, 
-                      borderRadius: 2,
-                      fontWeight: 'bold',
-                      fontSize: '0.9rem'
+                      bgcolor: 'white', 
+                      borderRadius: 1, 
+                      p: 1,
+                      maxHeight: 200,
+                      overflow: 'auto'
                     }}>
-                      {data.count}人が在宅勤務
+                      <Typography variant="caption" sx={{ color: 'text.secondary', mb: 1, display: 'block' }}>
+                        {details.length}名の在宅勤務者
+                      </Typography>
+                      {details.map((detail, index) => (
+                        <Box 
+                          key={index}
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            py: 0.5,
+                            px: 0.5,
+                            borderBottom: index < details.length - 1 ? '1px solid #f0f0f0' : 'none',
+                            '&:hover': {
+                              bgcolor: 'action.hover',
+                              borderRadius: 0.5
+                            }
+                          }}
+                        >
+                          <Box sx={{ 
+                            width: 4, 
+                            height: 4, 
+                            borderRadius: '50%', 
+                            bgcolor: 'primary.main',
+                            flexShrink: 0
+                          }} />
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block' }}>
+                              {detail.name}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {detail.time}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      ))}
+                    </Box>
+                  ) : (
+                    <Box sx={{ 
+                      textAlign: 'center', 
+                      py: 2,
+                      color: 'text.secondary'
+                    }}>
+                      <Typography variant="body2">
+                        この日は在宅勤務の予定がありません
+                      </Typography>
                     </Box>
                   )}
-                </Box>
-                <Divider sx={{ my: 2 }} />
-                {data && details.length > 0 ? (
-                  <List dense sx={{ bgcolor: 'white', borderRadius: 1, p: 1 }}>
-                    {details.map((detail, index) => (
-                      <ListItem 
-                        key={index}
-                        sx={{
-                          borderRadius: 1,
-                          mb: 0.5,
-                          '&:hover': {
-                            bgcolor: 'action.hover'
-                          }
-                        }}
-                      >
-                        <Box sx={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: 1,
-                          width: '100%'
-                        }}>
-                          <Box sx={{ 
-                            width: 8, 
-                            height: 8, 
-                            borderRadius: '50%', 
-                            bgcolor: 'primary.main' 
-                          }} />
-                          <ListItemText
-                            primary={
-                              <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                                {detail.name}
-                              </Typography>
-                            }
-                            secondary={
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-                                <Typography variant="body2" color="text.secondary">
-                                  ⏰ {detail.time}
-                                </Typography>
-                              </Box>
-                            }
-                          />
-                        </Box>
-                      </ListItem>
-                    ))}
-                  </List>
-                ) : (
-                  <Box sx={{ 
-                    textAlign: 'center', 
-                    py: 3,
-                    color: 'text.secondary'
-                  }}>
-                    <Typography variant="body1">
-                      この日は在宅勤務の予定がありません
-                    </Typography>
-                  </Box>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })()}
+                </CardContent>
+              </Card>
+            );
+          })()}
+        </Popover>
       </Paper>
     </Modal>
   );
