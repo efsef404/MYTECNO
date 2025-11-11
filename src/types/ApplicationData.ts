@@ -7,6 +7,7 @@ export interface ApplicationData {
   applicationDate: string;
   requestedDate: string;
   reason: string;
+  denialReason?: string; // 否認理由を追加
   status: '承認' | '否認' | '申請中';
   approverUsername: string | null;
   approverDepartmentName: string | null;

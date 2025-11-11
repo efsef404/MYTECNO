@@ -13,6 +13,7 @@ import {
   Button,
   Modal,
   IconButton,
+  TextField,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import dayjs from 'dayjs';
@@ -21,53 +22,78 @@ import type { ApplicationData } from '../../types/ApplicationData';
 interface ApplicationListProps {
   title: string;
   applications: ApplicationData[];
-  updateApplicationStatus?: (id: number, newStatus: ApplicationData['status']) => void;
+  updateApplicationStatus?: (id: number, newStatus: ApplicationData['status'], denialReason?: string) => void;
   selectedTab?: 'pending' | 'processed';
 }
 
 interface ConfirmModalProps {
   open: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (denialReason?: string) => void;
   action: '承認' | '否認';
 }
 
 // 確認モーダル（承認・否認時に表示）
-const ConfirmModal: React.FC<ConfirmModalProps> = ({ open, onClose, onConfirm, action }) => (
-  <Modal open={open} onClose={onClose} aria-labelledby="confirm-modal-title">
-    <Box
-      sx={{
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        width: 400,
-        bgcolor: 'background.paper',
-        borderRadius: 1,
-        boxShadow: 2,
-        p: 3,
-      }}
-    >
-      <Typography id="confirm-modal-title" variant="h6" component="h2" sx={{ mb: 2 }}>
-        {action}の確認
-      </Typography>
-      <Typography sx={{ mb: 3 }}>この申請を{action}してよろしいですか？</Typography>
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-        <Button onClick={onClose}>キャンセル</Button>
-        <Button
-          variant="contained"
-          color={action === '承認' ? 'success' : 'error'}
-          onClick={() => {
-            onConfirm();
-            onClose();
-          }}
-        >
-          {action}
-        </Button>
+const ConfirmModal: React.FC<ConfirmModalProps> = ({ open, onClose, onConfirm, action }) => {
+  const [denialReason, setDenialReason] = useState('');
+
+  const handleConfirm = () => {
+    if (action === '否認' && !denialReason.trim()) {
+      alert('否認する場合は理由を入力してください。');
+      return;
+    }
+    onConfirm(action === '否認' ? denialReason.trim() : undefined);
+    onClose();
+    setDenialReason(''); // モーダルを閉じるときに入力をクリア
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} aria-labelledby="confirm-modal-title">
+      <Box
+        sx={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 400,
+          bgcolor: 'background.paper',
+          borderRadius: 1,
+          boxShadow: 2,
+          p: 3,
+        }}
+      >
+        <Typography id="confirm-modal-title" variant="h6" component="h2" sx={{ mb: 2 }}>
+          {action}の確認
+        </Typography>
+        <Typography sx={{ mb: 3 }}>この申請を{action}してよろしいですか？</Typography>
+        
+        {action === '否認' && (
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            label="否認理由"
+            value={denialReason}
+            onChange={(e) => setDenialReason(e.target.value)}
+            sx={{ mb: 3 }}
+            placeholder="否認する理由を入力してください..."
+          />
+        )}
+        
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+          <Button onClick={onClose}>キャンセル</Button>
+          <Button
+            variant="contained"
+            color={action === '承認' ? 'success' : 'error'}
+            onClick={handleConfirm}
+          >
+            {action}
+          </Button>
+        </Box>
       </Box>
-    </Box>
-  </Modal>
-);
+    </Modal>
+  );
+};
 
 // ---- ここだけ変更: ステータス表示の文言・色・アイコンを明確にする ----
 // 目的: デザイン（位置・サイズ等）は変えずに「申請中」「承認済」「否認済」をわかりやすくする
@@ -214,6 +240,13 @@ function ApplicationList({ title, applications, updateApplicationStatus, selecte
                   申請日: {dayjs(app.applicationDate).format('YYYY/MM/DD')} 
                   <br/>
                   希望日: {dayjs(app.requestedDate).format('YYYY/MM/DD')} {app.startTime && app.endTime ? `${dayjs(app.startTime, 'HH:mm:ss').format('HH:mm')} - ${dayjs(app.endTime, 'HH:mm:ss').format('HH:mm')}` : '終日'}
+                  {app.status === '否認' && app.denialReason && (
+                    <>
+                      <br/>
+                      <span style={{ color: 'red', fontWeight: 'bold' }}>否認理由: </span>
+                      <span style={{ color: 'red' }}>{app.denialReason}</span>
+                    </>
+                  )}
                 </Typography>
               </CardContent>
 
@@ -333,6 +366,14 @@ function ApplicationList({ title, applications, updateApplicationStatus, selecte
                     <Typography color="text.secondary">理由</Typography>
                     <Typography sx={{ whiteSpace: 'pre-wrap' }}>{selectedApplication.reason}</Typography>
                   </Box>
+                  {selectedApplication.status === '否認' && selectedApplication.denialReason && (
+                    <Box className="detail-row">
+                      <Typography color="text.secondary">否認理由</Typography>
+                      <Typography sx={{ whiteSpace: 'pre-wrap', color: 'error.main' }}>
+                        {selectedApplication.denialReason}
+                      </Typography>
+                    </Box>
+                  )}
                   {selectedApplication.approverUsername && (
                     <Box className="detail-row">
                       <Typography color="text.secondary">処理者</Typography>
@@ -361,9 +402,11 @@ function ApplicationList({ title, applications, updateApplicationStatus, selecte
       <ConfirmModal
         open={confirmModal.open}
         onClose={() => setConfirmModal((prev) => ({ ...prev, open: false }))}
-        onConfirm={() => {
+        onConfirm={(denialReason?: string) => {
+          console.log('ConfirmModal onConfirm called with:', confirmModal, denialReason);
           if (confirmModal.applicationId && updateApplicationStatus) {
-            updateApplicationStatus(confirmModal.applicationId, confirmModal.action);
+            console.log('Calling updateApplicationStatus with:', confirmModal.applicationId, confirmModal.action, denialReason);
+            updateApplicationStatus(confirmModal.applicationId, confirmModal.action, denialReason);
           }
         }}
         action={confirmModal.action}

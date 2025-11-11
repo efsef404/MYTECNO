@@ -91,21 +91,34 @@ function ApprovalPage() {
   const pageCount = Math.ceil(totalCount / limit);
 
   // 申請ステータスを更新する関数
-  const updateApplicationStatus = async (id: number, newStatus: ApplicationData['status']) => {
+  const updateApplicationStatus = async (id: number, newStatus: ApplicationData['status'], denialReason?: string) => {
     setError('');
     try {
       const token = localStorage.getItem('token');
+      const requestBody: { newStatus: string; denialReason?: string } = { newStatus };
+      
+      console.log('Updating application status:', { id, newStatus, denialReason, requestBody });
+      
+      // 否認の場合は理由を追加
+      if (newStatus === '否認' && denialReason) {
+        requestBody.denialReason = denialReason;
+      }
+      
+      console.log('Final request body:', JSON.stringify(requestBody));
+      
       const response = await fetch(`http://localhost:3001/api/applications/${id}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ newStatus }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
-        throw new Error('申請ステータスの更新に失敗しました。');
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        console.error('API Error Response:', errorData);
+        throw new Error(`申請ステータスの更新に失敗しました。 Status: ${response.status}, Message: ${errorData.message}`);
       }
 
       // 成功したら申請一覧を再取得して画面を更新

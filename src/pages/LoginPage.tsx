@@ -39,9 +39,9 @@ function LoginPage({ handleLogin }: LoginPageProps) {
           setWelcomeMessage(`ようこそ、${decodedToken.username}さん`);
           setIsLoading(true); // ウェルカムメッセージ表示中はローディング状態
           setTimeout(() => {
-            console.log('Redirecting to /apply');
+            console.log('Redirecting to /home');
             handleLogin(); // App.tsxのログイン状態を更新
-            navigate('/apply'); // メインページへ遷移
+            navigate('/home'); // メインページへ遷移
           }, 1500); // 1.5秒後に遷移
         } else {
           console.log('Token expired');
@@ -81,7 +81,7 @@ function LoginPage({ handleLogin }: LoginPageProps) {
 
       localStorage.setItem('token', data.token);
       handleLogin();
-      navigate('/apply');
+      navigate('/home');
 
     } catch (err: any) {
       setError(err.message);

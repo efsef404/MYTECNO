@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Box, Container } from '@mui/material';
 import Sidebar from './components/Sidebar';
+import Header from './components/Header';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 
@@ -22,14 +23,12 @@ interface DecodedToken {
 }
 
 const drawerWidth = 240;
-const miniDrawerWidth = 60;
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [departmentName, setDepartmentName] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -73,38 +72,35 @@ function App() {
     setDepartmentName(null);
   };
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
   return (
     <Router>
       <Box sx={{ display: 'flex' }}>
         {isLoggedIn && (
-          <Sidebar
-            isLoggedIn={isLoggedIn}
-            handleLogout={handleLogout}
-            userRole={userRole}
-            username={username}
-            departmentName={departmentName}
-            sidebarOpen={sidebarOpen}
-            toggleSidebar={toggleSidebar}
-          />
+          <>
+            <Header
+              username={username}
+              departmentName={departmentName}
+              handleLogout={handleLogout}
+            />
+            <Sidebar
+              isLoggedIn={isLoggedIn}
+              userRole={userRole}
+            />
+          </>
         )}
         <Box
           component="main"
           sx={{
             flexGrow: 1,
-            ml: isLoggedIn
-              ? (sidebarOpen ? `${drawerWidth}px` : `${miniDrawerWidth}px`)
-              : 0,
+            ml: isLoggedIn ? `${drawerWidth}px` : 0,
+            mt: isLoggedIn ? 8 : 0, // Add top margin for fixed header
             transition: (theme) => theme.transitions.create(['margin'], {
               easing: theme.transitions.easing.sharp,
               duration: theme.transitions.duration.enteringScreen,
             }),
             display: 'flex',
             justifyContent: 'center',
-            alignItems: 'center',
+            alignItems: 'flex-start', // Changed from center to flex-start
             minHeight: '100vh',
           }}
         >
