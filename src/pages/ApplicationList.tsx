@@ -15,7 +15,8 @@ function ApplicationList() { // Renamed function
     setError('');
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3001/api/applications/my?page=${fetchPage}&limit=${limit}`, {
+      // 全データを取得（クライアント側でフィルタリング・ページングを行うため）
+      const response = await fetch(`http://localhost:3001/api/applications/my?page=1&limit=1000`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
 
@@ -48,13 +49,33 @@ function ApplicationList() { // Renamed function
     fetchApplications(page);
   }, [page]);
 
-  const pageCount = Math.ceil(totalCount / limit);
+  // クライアント側でページング
+  const startIndex = (page - 1) * limit;
+  const endIndex = startIndex + limit;
+  const paginatedApplications = applications.slice(startIndex, endIndex);
+  const pageCount = Math.ceil(applications.length / limit);
 
   return (
     <Box>
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold' }}>
+        <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 2 }}>
           申請一覧
+          {applications.length > 0 && (
+            <Typography 
+              component="span" 
+              sx={{ 
+                fontSize: '1rem', 
+                fontWeight: 500, 
+                color: 'text.secondary',
+                bgcolor: 'action.hover',
+                px: 2,
+                py: 0.5,
+                borderRadius: 2
+              }}
+            >
+              全{applications.length}件
+            </Typography>
+          )}
         </Typography>
         <Typography variant="body2" color="text.secondary">
           あなたが送信した在宅勤務申請の一覧です
@@ -63,12 +84,12 @@ function ApplicationList() { // Renamed function
 
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
       
-      <ApplicationListDisplay title="自分の申請一覧" applications={applications} />
+      <ApplicationListDisplay title="自分の申請一覧" applications={paginatedApplications} />
       
       {pageCount > 1 && (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3, gap: 2 }}>
           <Typography variant="body2" color="text.secondary">
-            {totalCount > 0 ? `${(page - 1) * limit + 1} - ${Math.min(page * limit, totalCount)}` : '0'} / {totalCount}件
+            {applications.length > 0 ? `${startIndex + 1} - ${Math.min(endIndex, applications.length)}` : '0'} / {applications.length}件
           </Typography>
           <Pagination 
             count={pageCount} 

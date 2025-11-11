@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Box, Typography, Pagination, Tabs, Tab, Paper, Alert } from '@mui/material';
+import { Box, Typography, Pagination, Tabs, Tab, Paper, Alert, Badge } from '@mui/material';
 import { HourglassEmpty, CheckCircle } from '@mui/icons-material';
 import ApplicationList from '../components/applications/ApplicationList';
 import type { ApplicationData } from '../types/ApplicationData'; // 型定義をインポート
@@ -37,7 +37,8 @@ function ApprovalPage() {
       const decodedToken: DecodedToken = jwtDecode(token);
       const currentUsername = decodedToken.username;
 
-      let apiUrl = `http://localhost:3001/api/approver/applications?page=${fetchPage}&limit=${limit}`;
+      // 全データを取得（クライアント側でフィルタリング・ページングを行うため）
+      let apiUrl = `http://localhost:3001/api/approver/applications?page=1&limit=1000`;
       if (statusFilter === 'pending') {
         apiUrl += '&status=pending';
       } else if (statusFilter === 'processed') {
@@ -88,7 +89,11 @@ function ApprovalPage() {
     fetchApplications(page, selectedTab);
   }, [page, selectedTab]); // pageまたはselectedTabが変更されたら再取得
 
-  const pageCount = Math.ceil(totalCount / limit);
+  // クライアント側でページング
+  const startIndex = (page - 1) * limit;
+  const endIndex = startIndex + limit;
+  const paginatedApplications = applications.slice(startIndex, endIndex);
+  const pageCount = Math.ceil(applications.length / limit);
 
   // 申請ステータスを更新する関数
   const updateApplicationStatus = async (id: number, newStatus: ApplicationData['status'], denialReason?: string) => {
@@ -154,19 +159,34 @@ function ApprovalPage() {
             '& .MuiTab-root': {
               minHeight: 64,
               fontSize: '1rem',
+              fontWeight: 600,
             },
           }}
         >
           <Tab 
             icon={<HourglassEmpty />} 
             iconPosition="start" 
-            label="申請中" 
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                申請中
+                {selectedTab === 'pending' && applications.length > 0 && (
+                  <Badge badgeContent={applications.length} color="warning" max={99} />
+                )}
+              </Box>
+            }
             value="pending" 
           />
           <Tab 
             icon={<CheckCircle />} 
             iconPosition="start" 
-            label="承認済み / 否認" 
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                承認済み / 否認
+                {selectedTab === 'processed' && applications.length > 0 && (
+                  <Badge badgeContent={applications.length} color="default" max={99} />
+                )}
+              </Box>
+            }
             value="processed" 
           />
         </Tabs>
@@ -176,7 +196,7 @@ function ApprovalPage() {
       
       <ApplicationList 
         title={title} 
-        applications={applications} 
+        applications={paginatedApplications} 
         updateApplicationStatus={updateApplicationStatus} 
         selectedTab={selectedTab} 
       />
@@ -184,7 +204,7 @@ function ApprovalPage() {
       {pageCount > 1 && (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3, gap: 2 }}>
           <Typography variant="body2" color="text.secondary">
-            {totalCount > 0 ? `${(page - 1) * limit + 1} - ${Math.min(page * limit, totalCount)}` : '0'} / {totalCount}件
+            {applications.length > 0 ? `${startIndex + 1} - ${Math.min(endIndex, applications.length)}` : '0'} / {applications.length}件
           </Typography>
           <Pagination
             count={pageCount}
