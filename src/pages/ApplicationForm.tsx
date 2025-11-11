@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Box, TextField, Button, Typography, Checkbox, FormControlLabel, Alert } from '@mui/material';
+import { useState } from 'react';
+import { Box, TextField, Button, Typography, Checkbox, FormControlLabel, Alert, Paper, Card, CardContent, Divider } from '@mui/material';
+import { Send as SendIcon, Info as InfoIcon } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs, { Dayjs } from 'dayjs';
 
@@ -66,67 +67,136 @@ export default function ApplicationForm() {
 
   return (
     <Box>
-      <Typography variant="h5" gutterBottom>
+      <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
         新規申請
       </Typography>
+      
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {successMessage && <Alert severity="success" sx={{ mb: 2 }}>{successMessage}</Alert>}
-      <form onSubmit={handleSubmit}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <DatePicker
-            label="申請希望日"
-            value={requestedDate}
-            onChange={(newValue) => setRequestedDate(newValue)}
-            minDate={dayjs()}
-            sx={{ maxWidth: '250px' }}
-          />
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <TextField
-              label="開始時刻"
-              type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              InputLabelProps={{
-                shrink: true,
-              }}
-            />
-            <TextField
-              label="終了時刻"
-              type="time"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              InputLabelProps={{
-                shrink: true,
-              }}
-            />
+      
+      {/* 注意事項 */}
+      <Card sx={{ mb: 3, bgcolor: 'info.lighter', borderLeft: 4, borderColor: 'info.main' }}>
+        <CardContent>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+            <InfoIcon sx={{ mr: 1, color: 'info.main', mt: 0.5 }} />
+            <Box>
+              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                申請時の注意事項
+              </Typography>
+              <Typography variant="body2" component="div">
+                ・ 申請希望日は本日以降の日付を選択してください<br />
+                ・ 当日申請の場合は「特認」にチェックが必要です<br />
+                ・ 理由は具体的に記載してください
+              </Typography>
+            </Box>
           </Box>
-          <TextField
-            label="理由"
-            variant="outlined"
-            fullWidth
-            multiline
-            rows={3}
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-          />
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 2 }}>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={isSpecialApproval}
-                  onChange={(e) => setIsSpecialApproval(e.target.checked)}
-                  name="specialApproval"
-                  color="primary"
+        </CardContent>
+      </Card>
+
+      <Paper elevation={2} sx={{ p: 3 }}>
+        <form onSubmit={handleSubmit}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {/* 申請希望日 */}
+            <Box>
+              <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
+                申請希望日 *
+              </Typography>
+              <DatePicker
+                label="日付を選択"
+                value={requestedDate}
+                onChange={(newValue: Dayjs | null) => setRequestedDate(newValue)}
+                minDate={dayjs()}
+                sx={{ width: '100%', maxWidth: '300px' }}
+              />
+            </Box>
+
+            <Divider />
+
+            {/* 勤務時間 */}
+            <Box>
+              <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
+                勤務時間
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <TextField
+                  label="開始時刻"
+                  type="time"
+                  value={startTime}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStartTime(e.target.value)}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  sx={{ flex: 1, minWidth: '150px' }}
                 />
-              }
-              label="特認"
-            />
-            <Button type="submit" variant="contained" size="large">
-              申請する
-            </Button>
+                <TextField
+                  label="終了時刻"
+                  type="time"
+                  value={endTime}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEndTime(e.target.value)}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  sx={{ flex: 1, minWidth: '150px' }}
+                />
+              </Box>
+            </Box>
+
+            <Divider />
+
+            {/* 理由 */}
+            <Box>
+              <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
+                理由 *
+              </Typography>
+              <TextField
+                placeholder="在宅勤務を希望する理由を具体的に記載してください"
+                variant="outlined"
+                fullWidth
+                multiline
+                rows={4}
+                value={reason}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReason(e.target.value)}
+                required
+              />
+            </Box>
+
+            <Divider />
+
+            {/* 特認チェックボックスと送信ボタン */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={isSpecialApproval}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setIsSpecialApproval(e.target.checked)}
+                    name="specialApproval"
+                    color="warning"
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                      特認申請
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      当日申請の場合はチェックが必要です
+                    </Typography>
+                  </Box>
+                }
+              />
+              <Button 
+                type="submit" 
+                variant="contained" 
+                size="large"
+                startIcon={<SendIcon />}
+                sx={{ minWidth: '150px' }}
+              >
+                申請する
+              </Button>
+            </Box>
           </Box>
-        </Box>
-      </form>
+        </form>
+      </Paper>
     </Box>
   );
 }

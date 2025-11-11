@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, TextField, Button, Paper, CircularProgress } from '@mui/material';
+import { Box, Typography, TextField, Button, Paper, CircularProgress, InputAdornment, IconButton, Alert } from '@mui/material';
+import { Visibility, VisibilityOff, Login as LoginIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 
@@ -23,6 +24,7 @@ function LoginPage({ handleLogin }: LoginPageProps) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true); // 初期ロード状態
   const [welcomeMessage, setWelcomeMessage] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     console.log('LoginPage useEffect triggered');
@@ -100,10 +102,16 @@ function LoginPage({ handleLogin }: LoginPageProps) {
 
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
-      <Paper sx={{ p: 4, maxWidth: 400, width: '100%' }}>
-        <Typography variant="h4"  align="center">
-          ログイン
-        </Typography>
+      <Paper elevation={3} sx={{ p: 4, maxWidth: 400, width: '100%', borderRadius: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 2 }}>
+          <LoginIcon sx={{ fontSize: 48, color: 'primary.main', mb: 1 }} />
+          <Typography variant="h4" align="center" gutterBottom>
+            ログイン
+          </Typography>
+          <Typography variant="body2" color="text.secondary" align="center">
+            在宅勤務申請システム
+          </Typography>
+        </Box>
         <form onSubmit={onLogin}>
           <TextField
             label="ユーザー名"
@@ -111,21 +119,37 @@ function LoginPage({ handleLogin }: LoginPageProps) {
             fullWidth
             margin="normal"
             value={usernameInput}
-            onChange={(e) => setUsernameInput(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUsernameInput(e.target.value)}
+            required
+            autoComplete="username"
           />
           <TextField
             label="パスワード"
             variant="outlined"
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             fullWidth
             margin="normal"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+            required
+            autoComplete="current-password"
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    onClick={() => setShowPassword(!showPassword)}
+                    edge="end"
+                  >
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
           />
           {error && (
-            <Typography color="error" variant="body2" sx={{ mt: 1 }}>
+            <Alert severity="error" sx={{ mt: 2 }}>
               {error}
-            </Typography>
+            </Alert>
           )}
           <Button
             type="submit"
@@ -133,9 +157,10 @@ function LoginPage({ handleLogin }: LoginPageProps) {
             fullWidth
             size="large"
             sx={{ mt: 3 }}
-            disabled={isLoading} // ローディング中はボタンを無効化
+            disabled={isLoading}
+            startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : null}
           >
-            ログイン
+            {isLoading ? 'ログイン中...' : 'ログイン'}
           </Button>
         </form>
       </Paper>

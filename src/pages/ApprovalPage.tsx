@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Typography, Pagination, Tabs, Tab } from '@mui/material';
+import { useState, useEffect } from 'react';
+import { Box, Typography, Pagination, Tabs, Tab, Paper, Alert } from '@mui/material';
+import { HourglassEmpty, CheckCircle } from '@mui/icons-material';
 import ApplicationList from '../components/applications/ApplicationList';
 import type { ApplicationData } from '../types/ApplicationData'; // 型定義をインポート
 import dayjs from 'dayjs';
@@ -119,25 +120,57 @@ function ApprovalPage() {
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
-        承認ページ
-      </Typography>
-
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs value={selectedTab} onChange={(_event, newValue) => {
-          setSelectedTab(newValue);
-          setPage(1); // タブ切り替え時にページを1に戻す
-        }} aria-label="application status tabs">
-          <Tab label="申請中" value="pending" />
-          <Tab label="承認済み / 否認" value="processed" />
-        </Tabs>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold' }}>
+          承認ページ
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          部門の在宅勤務申請を承認・否認できます
+        </Typography>
       </Box>
 
-      {error && <p style={{ color: 'red' }}>{error}</p>} 
-      <ApplicationList title={title} applications={applications} updateApplicationStatus={updateApplicationStatus} selectedTab={selectedTab} />
+      <Paper elevation={1} sx={{ mb: 3 }}>
+        <Tabs 
+          value={selectedTab} 
+          onChange={(_event: React.SyntheticEvent, newValue: 'pending' | 'processed') => {
+            setSelectedTab(newValue);
+            setPage(1);
+          }} 
+          aria-label="application status tabs"
+          sx={{
+            '& .MuiTab-root': {
+              minHeight: 64,
+              fontSize: '1rem',
+            },
+          }}
+        >
+          <Tab 
+            icon={<HourglassEmpty />} 
+            iconPosition="start" 
+            label="申請中" 
+            value="pending" 
+          />
+          <Tab 
+            icon={<CheckCircle />} 
+            iconPosition="start" 
+            label="承認済み / 否認" 
+            value="processed" 
+          />
+        </Tabs>
+      </Paper>
+
+      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+      
+      <ApplicationList 
+        title={title} 
+        applications={applications} 
+        updateApplicationStatus={updateApplicationStatus} 
+        selectedTab={selectedTab} 
+      />
+      
       {pageCount > 1 && (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3, gap: 2 }}>
-          <Typography>
+          <Typography variant="body2" color="text.secondary">
             {totalCount > 0 ? `${(page - 1) * limit + 1} - ${Math.min(page * limit, totalCount)}` : '0'} / {totalCount}件
           </Typography>
           <Pagination
@@ -145,6 +178,7 @@ function ApprovalPage() {
             page={page}
             onChange={handlePageChange}
             color="primary"
+            size="large"
           />
         </Box>
       )}

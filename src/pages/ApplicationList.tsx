@@ -1,18 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Pagination, Typography } from '@mui/material';
+import { useState, useEffect } from 'react';
+import { Box, Pagination, Typography, Alert } from '@mui/material';
 import ApplicationListDisplay from '../components/applications/ApplicationList'; // Renamed import
 import dayjs from 'dayjs';
-import { jwtDecode } from 'jwt-decode';
 import type { ApplicationData } from '../types/ApplicationData';
-
-interface DecodedToken {
-  id: number;
-  username: string;
-  role: string;
-  departmentName: string;
-  iat: number;
-  exp: number;
-}
 
 function ApplicationList() { // Renamed function
   const [applications, setApplications] = useState<ApplicationData[]>([]);
@@ -20,7 +10,6 @@ function ApplicationList() { // Renamed function
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const limit = 10;
-  const [userDepartment, setUserDepartment] = useState<string | null>(null);
 
   const fetchApplications = async (fetchPage: number) => {
     setError('');
@@ -57,37 +46,39 @@ function ApplicationList() { // Renamed function
 
   useEffect(() => {
     fetchApplications(page);
-
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const decodedToken: DecodedToken = jwtDecode(token);
-        setUserDepartment(decodedToken.departmentName);
-      } catch (error) {
-        console.error('Invalid token:', error);
-      }
-    }
   }, [page]);
 
   const pageCount = Math.ceil(totalCount / limit);
 
   return (
     <Box>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      <Typography variant="h5" gutterBottom>
-        自分の申請一覧 {/* Updated title */}
-      </Typography>
-      <Box sx={{ mt: 5 }}>
-        <ApplicationListDisplay title="自分の申請一覧" applications={applications} />
-        {pageCount > 1 && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3, gap: 2 }}>
-            <Typography>
-              {totalCount > 0 ? `${(page - 1) * limit + 1} - ${Math.min(page * limit, totalCount)}` : '0'} / {totalCount}件
-            </Typography>
-            <Pagination count={pageCount} page={page} onChange={handlePageChange} color="primary" />
-          </Box>
-        )}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold' }}>
+          申請一覧
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          あなたが送信した在宅勤務申請の一覧です
+        </Typography>
       </Box>
+
+      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+      
+      <ApplicationListDisplay title="自分の申請一覧" applications={applications} />
+      
+      {pageCount > 1 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3, gap: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            {totalCount > 0 ? `${(page - 1) * limit + 1} - ${Math.min(page * limit, totalCount)}` : '0'} / {totalCount}件
+          </Typography>
+          <Pagination 
+            count={pageCount} 
+            page={page} 
+            onChange={handlePageChange} 
+            color="primary" 
+            size="large"
+          />
+        </Box>
+      )}
     </Box>
   );
 }

@@ -9,7 +9,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
-app.use(cors({ origin: 'http://localhost:5173' }));
+app.use(cors({ origin: 'http://localhost:5174' }));
 app.use(express.json());
 
 // データベース接続設定
@@ -560,6 +560,92 @@ app.get('/api/applications/approved', authenticateToken, async (_req: AuthReques
     console.error('Get Approved Applications API Error:', error);
     if (connection) await connection.end();
     res.status(500).json({ message: '承認済み申請の取得に失敗しました。' });
+  }
+});
+
+// カレンダー用: 自分の承認済み在宅勤務日を取得
+app.get('/api/calendar/my-approved', authenticateToken, async (req: AuthRequest, res: Response) => {
+  let connection;
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.sendStatus(401);
+    }
+
+    connection = await mysql.createConnection(dbConfig);
+    const query = `
+      SELECT
+        a.id,
+        a.requested_date,
+        a.start_time,
+        a.end_time,
+        u.username
+      FROM
+        applications a
+      JOIN
+        users u ON a.user_id = u.id
+      WHERE
+        a.user_id = ? AND a.status_id = 2 AND a.approver_id IS NOT NULL
+      ORDER BY
+        a.requested_date ASC;
+    `;
+    const [applications]: [any[], any] = await connection.execute(query, [userId]);
+
+    console.log('My calendar data fetched for user', userId, ':', applications); // デバッグ用ログ
+
+    await connection.end();
+    res.json(applications);
+  } catch (error) {
+    console.error('Get My Calendar API Error:', error);
+    if (connection) await connection.end();
+    res.status(500).json({ message: 'カレンダーデータの取得に失敗しました。' });
+  }
+});
+
+// カレンダー用: 全社員の承認済み在宅勤務日を取得（管理者用）
+app.get('/api/calendar/all-approved', authenticateToken, adminOnly, async (_req: AuthRequest, res: Response) => {
+  let connection;
+  try {
+    connection = await mysql.createConnection(dbConfig);
+    const query = `
+      SELECT
+        DATE(a.requested_date) as date,
+        COUNT(*) as count,
+        GROUP_CONCAT(
+          CONCAT(
+            COALESCE(u.username, 'Unknown'), 
+            '|', 
+            COALESCE(TIME_FORMAT(a.start_time, '%H:%i'), '00:00'), 
+            '-', 
+            COALESCE(TIME_FORMAT(a.end_time, '%H:%i'), '00:00')
+          )
+          SEPARATOR ';;'
+        ) as details
+      FROM
+        applications a
+      JOIN
+        users u ON a.user_id = u.id
+      WHERE
+        a.status_id = 2 
+        AND a.approver_id IS NOT NULL
+        AND a.start_time IS NOT NULL
+        AND a.end_time IS NOT NULL
+      GROUP BY
+        DATE(a.requested_date)
+      ORDER BY
+        date ASC;
+    `;
+    const [applications]: [any[], any] = await connection.execute(query);
+
+    console.log('Calendar data fetched:', applications); // デバッグ用ログ
+    console.log('Number of dates with approved applications:', applications.length);
+
+    await connection.end();
+    res.json(applications);
+  } catch (error) {
+    console.error('Get All Calendar API Error:', error);
+    if (connection) await connection.end();
+    res.status(500).json({ message: 'カレンダーデータの取得に失敗しました。' });
   }
 });
 
