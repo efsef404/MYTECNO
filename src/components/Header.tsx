@@ -17,6 +17,7 @@ import {
   CardContent,
   Chip
 } from '@mui/material';
+import MenuIcon from '@mui/icons-material/Menu';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -204,25 +205,25 @@ function Header({ username, departmentName, handleLogout }: HeaderProps) {
       position="fixed" 
       sx={{ 
         zIndex: (theme) => theme.zIndex.drawer + 1,
-        backgroundColor: '#5D99FF',
-        boxShadow: 2
       }}
     >
-      <Toolbar>
-        <Typography 
-          variant="h6" 
-          component="div" 
-          sx={{ 
+      <Toolbar sx={{ minHeight: '56px !important', py: 0.5, pl: 2 }}>
+        <Typography
+          variant="h6"
+          noWrap
+          component="div"
+          sx={{
             flexGrow: 1,
-            fontWeight: 'bold',
-            fontSize: '1.2rem'
+            fontWeight: 600,
+            letterSpacing: '0.3px',
+            fontSize: '1.1rem',
           }}
         >
           在宅勤務申請システム
         </Typography>
         
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: '0.85rem' }}>
             {departmentName}
           </Typography>
           
@@ -231,9 +232,9 @@ function Header({ username, departmentName, handleLogout }: HeaderProps) {
             sx={{
               display: 'flex',
               alignItems: 'center',
-              gap: 1,
+              gap: 0.75,
               cursor: 'pointer',
-              padding: '4px 8px',
+              padding: '4px 10px',
               borderRadius: 1,
               '&:hover': {
                 backgroundColor: 'rgba(255, 255, 255, 0.1)',
@@ -241,15 +242,15 @@ function Header({ username, departmentName, handleLogout }: HeaderProps) {
               transition: 'background-color 0.2s',
             }}
           >
-            <Typography variant="body1" sx={{ color: 'white', fontWeight: 'medium' }}>
+            <Typography variant="body2" sx={{ color: 'white', fontWeight: 500, fontSize: '0.9rem' }}>
               {username}さん
             </Typography>
-            <AccountCircleIcon sx={{ color: 'white' }} />
+            <AccountCircleIcon sx={{ color: 'white', fontSize: '1.3rem' }} />
           </Box>
 
-          <IconButton color="inherit" sx={{ ml: 1 }} onClick={handleNotificationMenuOpen}>
+          <IconButton color="inherit" sx={{ ml: 0.5, p: 0.75 }} onClick={handleNotificationMenuOpen}>
             <Badge badgeContent={unreadCount} color="error">
-              <NotificationsIcon />
+              <NotificationsIcon sx={{ fontSize: '1.3rem' }} />
             </Badge>
           </IconButton>
         </Box>
