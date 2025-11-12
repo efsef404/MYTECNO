@@ -2,6 +2,7 @@ import { useState } from 'react';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import {
   Paper,
   Typography,
@@ -281,9 +282,15 @@ function ApplicationList({ title, applications, updateApplicationStatus, selecte
                 mb: 0.5
               }}
             >
+              <Box sx={{ flex: 1, minWidth: 0, pl: 1 }}> {/* 特認 */}
+                <Typography variant="caption" sx={{ fontSize: '0.7rem', fontWeight: 600, color: 'text.secondary' }}>
+                  特認
+                </Typography>
+              </Box>
               <Box 
                 sx={{ 
-                  minWidth: '60px', 
+                  flex: 1, 
+                  minWidth: 0,
                   textAlign: 'center',
                   cursor: 'pointer',
                   '&:hover': { color: 'primary.main' }
@@ -298,6 +305,7 @@ function ApplicationList({ title, applications, updateApplicationStatus, selecte
               <Box 
                 sx={{ 
                   flex: 1,
+                  minWidth: 0,
                   cursor: 'pointer',
                   '&:hover': { color: 'primary.main' }
                 }}
@@ -308,21 +316,21 @@ function ApplicationList({ title, applications, updateApplicationStatus, selecte
                   <SortIcon field="name" />
                 </Typography>
               </Box>
-              <Box sx={{ minWidth: '90px' }}>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography variant="caption" sx={{ fontSize: '0.7rem', fontWeight: 600, color: 'text.secondary' }}>
                   勤務時間
                 </Typography>
               </Box>
               <Box 
                 sx={{ 
-                  minWidth: '140px', 
-                  textAlign: 'right',
+                  flex: 1, 
+                  minWidth: 0,
                   cursor: 'pointer',
                   '&:hover': { color: 'primary.main' }
                 }}
                 onClick={() => handleSort('status')}
               >
-                <Typography variant="caption" sx={{ fontSize: '0.7rem', fontWeight: 600, color: 'text.secondary', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
+                <Typography variant="caption" sx={{ fontSize: '0.7rem', fontWeight: 600, color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   ステータス
                   <SortIcon field="status" />
                 </Typography>
@@ -356,25 +364,28 @@ function ApplicationList({ title, applications, updateApplicationStatus, selecte
                 onClick={() => handleToggleExpand(app.id)}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Box sx={{ flex: 1, minWidth: 0, pl: 1 }}> {/* 特認 */}
+                    {app.isSpecialApproval ? (
+                      <FiberManualRecordIcon sx={{ color: 'error.main', fontSize: '0.8rem' }} />
+                    ) : null}
+                  </Box>
                   {/* 勤務日 */}
                   <Box 
                     sx={{ 
-                      minWidth: '60px',
-                      textAlign: 'center',
-                      py: 0.5,
-                      px: 1,
-                      borderRadius: 1,
-                      bgcolor: 'primary.lighter',
-                      border: '1px solid',
-                      borderColor: 'primary.light'
+                      flex: 1,
+                      minWidth: 0,
+                      display: 'flex',
+                      justifyContent: 'center'
                     }}
                   >
-                    <Typography variant="body2" sx={{ fontWeight: 700, color: 'primary.main', fontSize: '0.9rem', lineHeight: 1.2 }}>
-                      {dayjs(app.requestedDate).format('M/D')}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', lineHeight: 1 }}>
-                      {dayjs(app.requestedDate).format('ddd')}
-                    </Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'baseline', gap: 0.5 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 700, color: 'primary.main', fontSize: '0.9rem', lineHeight: 1.2 }}>
+                        {dayjs(app.requestedDate).format('M/D')}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', lineHeight: 1 }}>
+                        ({dayjs(app.requestedDate).format('ddd')})
+                      </Typography>
+                    </Box>
                   </Box>
                   
                   {/* 申請者名（コンパクト） */}
@@ -382,7 +393,7 @@ function ApplicationList({ title, applications, updateApplicationStatus, selecte
                     <Typography 
                       variant="body2" 
                       sx={{ 
-                        fontWeight: 600, 
+                        fontWeight: 400, 
                         fontSize: '0.85rem',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -394,11 +405,12 @@ function ApplicationList({ title, applications, updateApplicationStatus, selecte
                   </Box>
 
                   {/* 勤務時間 */}
-                  <Box sx={{ minWidth: '90px', flexShrink: 0 }}>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography 
                       variant="caption" 
                       sx={{ 
                         fontSize: '0.75rem',
+                        fontWeight: 400,
                         color: 'text.secondary',
                         display: 'flex',
                         alignItems: 'center',
@@ -413,15 +425,7 @@ function ApplicationList({ title, applications, updateApplicationStatus, selecte
                   </Box>
 
                   {/* バッジ群 */}
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-                    {!!app.isSpecialApproval && (
-                      <Chip
-                        label="特認"
-                        color="error"
-                        size="small"
-                        sx={{ height: 22, fontSize: '0.65rem', fontWeight: 700, '& .MuiChip-label': { px: 1 } }}
-                      />
-                    )}
+                  <Box sx={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <Chip
                       label={getStatusChipProps(app.status).label}
                       color={getStatusChipProps(app.status).color}

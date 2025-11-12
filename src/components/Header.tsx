@@ -454,7 +454,7 @@ function Header({ username, departmentName, handleLogout, open, onToggle, drawer
                       </Box>
                     </Box>
 
-                    <Box sx={{ display: 'grid', gap: 2 }}>
+                    <Box sx={{ display: 'grid', gap: 1.5 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Typography color="text.secondary">申請日</Typography>
                         <Typography>

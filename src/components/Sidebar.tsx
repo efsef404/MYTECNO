@@ -54,7 +54,9 @@ function Sidebar({
                   color: 'black',
                   py: 1,
                   px: open ? 2 : 1,
-                  justifyContent: open ? 'flex-start' : 'center',
+                  flexDirection: open ? 'row' : 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   '&:hover': {
                     backgroundColor: '#f5f5f5',
                     color: '#1976d2',
@@ -62,10 +64,18 @@ function Sidebar({
                   },
                 }}
               >
-                <ListItemIcon sx={{ color: 'black', minWidth: open ? 40 : 'auto', justifyContent: 'center' }}>
+                <ListItemIcon sx={{ color: 'black', minWidth: 'auto', justifyContent: 'center', mr: open ? 1.5 : 0, mb: open ? 0 : 0.5 }}>
                   <HomeIcon fontSize="small" />
                 </ListItemIcon>
-                {open && <ListItemText primary="ホーム" primaryTypographyProps={{ fontSize: '0.9rem' }} />}
+                <ListItemText 
+                  primary="ホーム" 
+                  primaryTypographyProps={{ 
+                    fontSize: open ? '0.9rem' : '0.7rem',
+                    fontWeight: 400,
+                    whiteSpace: 'nowrap',
+                  }} 
+                  sx={{ display: open ? 'block' : 'block', mt: 0 }}
+                />
               </ListItem>
             <ListItem
                 component={Link}
@@ -74,7 +84,9 @@ function Sidebar({
                   color: 'black',
                   py: 1,
                   px: open ? 2 : 1,
-                  justifyContent: open ? 'flex-start' : 'center',
+                  flexDirection: open ? 'row' : 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   '&:hover': {
                     backgroundColor: '#f5f5f5',
                     color: '#d32f2f',
@@ -82,10 +94,18 @@ function Sidebar({
                   },
                 }}
               >
-                <ListItemIcon sx={{ color: 'black', minWidth: open ? 40 : 'auto', justifyContent: 'center' }}>
+                <ListItemIcon sx={{ color: 'black', minWidth: 'auto', justifyContent: 'center', mr: open ? 1.5 : 0, mb: open ? 0 : 0.5 }}>
                   <EditIcon fontSize="small" />
                 </ListItemIcon>
-                {open && <ListItemText primary="新規申請" primaryTypographyProps={{ fontSize: '0.9rem' }} />}
+                <ListItemText 
+                  primary="新規申請" 
+                  primaryTypographyProps={{ 
+                    fontSize: open ? '0.9rem' : '0.7rem',
+                    fontWeight: 400,
+                    whiteSpace: 'nowrap',
+                  }}
+                  sx={{ display: open ? 'block' : 'block', mt: 0 }}
+                />
               </ListItem>
               <ListItem
                 component={Link}
@@ -94,7 +114,9 @@ function Sidebar({
                   color: 'black',
                   py: 1,
                   px: open ? 2 : 1,
-                  justifyContent: open ? 'flex-start' : 'center',
+                  flexDirection: open ? 'row' : 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   '&:hover': {
                     backgroundColor: '#f5f5f5',
                     color: '#d32f2f',
@@ -102,10 +124,18 @@ function Sidebar({
                   },
                 }}
               >
-                <ListItemIcon sx={{ color: 'black', minWidth: open ? 40 : 'auto', justifyContent: 'center' }}>
+                <ListItemIcon sx={{ color: 'black', minWidth: 'auto', justifyContent: 'center', mr: open ? 1.5 : 0, mb: open ? 0 : 0.5 }}>
                   <AssignmentIcon fontSize="small" />
                 </ListItemIcon>
-                {open && <ListItemText primary="申請一覧" primaryTypographyProps={{ fontSize: '0.9rem' }} />}
+                <ListItemText 
+                  primary="申請一覧" 
+                  primaryTypographyProps={{ 
+                    fontSize: open ? '0.9rem' : '0.7rem',
+                    fontWeight: 400,
+                    whiteSpace: 'nowrap',
+                  }}
+                  sx={{ display: open ? 'block' : 'block', mt: 0 }}
+                />
               </ListItem>
               {(userRole === '承認者' || userRole === '管理者') && (
                 <ListItem
@@ -115,7 +145,9 @@ function Sidebar({
                     color: 'black',
                     py: 1,
                     px: open ? 2 : 1,
-                    justifyContent: open ? 'flex-start' : 'center',
+                    flexDirection: open ? 'row' : 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     '&:hover': {
                       backgroundColor: '#f5f5f5',
                       color: '#388e3c',
@@ -123,10 +155,18 @@ function Sidebar({
                     },
                   }}
                 >
-                  <ListItemIcon sx={{ color: 'black', minWidth: open ? 40 : 'auto', justifyContent: 'center' }}>
+                  <ListItemIcon sx={{ color: 'black', minWidth: 'auto', justifyContent: 'center', mr: open ? 1.5 : 0, mb: open ? 0 : 0.5 }}>
                     <CheckCircleIcon fontSize="small" />
                   </ListItemIcon>
-                  {open && <ListItemText primary="承認" primaryTypographyProps={{ fontSize: '0.9rem' }} />}
+                  <ListItemText 
+                    primary="承認" 
+                    primaryTypographyProps={{ 
+                      fontSize: open ? '0.9rem' : '0.7rem',
+                      fontWeight: 400,
+                      whiteSpace: 'nowrap',
+                    }}
+                    sx={{ display: open ? 'block' : 'block', mt: 0 }}
+                  />
                 </ListItem>
               )}
               {userRole === '管理者' && (
@@ -137,7 +177,9 @@ function Sidebar({
                     color: 'black',
                     py: 1,
                     px: open ? 2 : 1,
-                    justifyContent: open ? 'flex-start' : 'center',
+                    flexDirection: open ? 'row' : 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     '&:hover': {
                       backgroundColor: '#f5f5f5',
                       color: '#fbc02d',
@@ -145,10 +187,18 @@ function Sidebar({
                     },
                   }}
                 >
-                  <ListItemIcon sx={{ color: 'black', minWidth: open ? 40 : 'auto', justifyContent: 'center' }}>
+                  <ListItemIcon sx={{ color: 'black', minWidth: 'auto', justifyContent: 'center', mr: open ? 1.5 : 0, mb: open ? 0 : 0.5 }}>
                     <GroupIcon fontSize="small" />
                   </ListItemIcon>
-                  {open && <ListItemText primary="管理" primaryTypographyProps={{ fontSize: '0.9rem' }} />}
+                  <ListItemText 
+                    primary="管理" 
+                    primaryTypographyProps={{ 
+                      fontSize: open ? '0.9rem' : '0.7rem',
+                      fontWeight: 400,
+                      whiteSpace: 'nowrap',
+                    }}
+                    sx={{ display: open ? 'block' : 'block', mt: 0 }}
+                  />
                 </ListItem>
               )}
             </>
