@@ -86,54 +86,58 @@ function App() {
             username={username}
             departmentName={departmentName}
             handleLogout={handleLogout}
+            open={sidebarOpen}
+            onToggle={handleSidebarToggle}
+            drawerWidth={drawerWidth}
           />
         )}
-        <Box sx={{ display: 'flex' }}>
-          {isLoggedIn && (
-            <Sidebar
-              isLoggedIn={isLoggedIn}
-              userRole={userRole}
-              open={sidebarOpen}
-              onToggle={handleSidebarToggle}
+        {isLoggedIn && (
+          <Sidebar
+            isLoggedIn={isLoggedIn}
+            userRole={userRole}
+            open={sidebarOpen}
+          />
+        )}
+        <Box
+          component="main"
+          sx={{
+            flexGrow: 1,
+            mt: isLoggedIn ? '56px' : 0,
+            ml: isLoggedIn ? `${sidebarOpen ? drawerWidth : drawerWidthClosed}px` : 0,
+            minHeight: '100vh',
+            p: 2,
+            transition: (theme) => theme.transitions.create('margin', {
+              easing: theme.transitions.easing.sharp,
+              duration: theme.transitions.duration.enteringScreen,
+            }),
+          }}
+        >
+          <Routes>
+            <Route
+              path="/"
+              element={!isLoggedIn ? <LoginPage handleLogin={handleLogin} /> : <Navigate to="/home" />}
             />
-          )}
-          <Box
-            component="main"
-            sx={{
-              flexGrow: 1,
-              mt: isLoggedIn ? '100px' : 0,
-              ml: isLoggedIn ? '25px' : 0,
-              minHeight: '100vh',
-              p: 2,
-            }}
-          >
-            <Routes>
-              <Route
-                path="/"
-                element={!isLoggedIn ? <LoginPage handleLogin={handleLogin} /> : <Navigate to="/home" />}
-              />
-              <Route
-                path="/home"
-                element={isLoggedIn ? <HomePage /> : <Navigate to="/" />}
-              />
-              <Route
-                path="/application/new"
-                element={isLoggedIn ? <ApplicationForm /> : <Navigate to="/" />}
-              />
-              <Route
-                path="/application/list"
-                element={isLoggedIn ? <ApplicationList /> : <Navigate to="/" />}
-              />
-              <Route
-                path="/approve"
-                element={isLoggedIn && (userRole === '承認者' || userRole === '管理者') ? <ApprovalPage /> : <Navigate to="/application/list" />}
-              />
-              <Route
-                path="/manage"
-                element={isLoggedIn && userRole === '管理者' ? <ManagementPage handleLogout={handleLogout} /> : <Navigate to="/application/list" />}
-              />
-            </Routes>
-          </Box>
+            <Route
+              path="/home"
+              element={isLoggedIn ? <HomePage /> : <Navigate to="/" />}
+            />
+            <Route
+              path="/application/new"
+              element={isLoggedIn ? <ApplicationForm /> : <Navigate to="/" />}
+            />
+            <Route
+              path="/application/list"
+              element={isLoggedIn ? <ApplicationList /> : <Navigate to="/" />}
+            />
+            <Route
+              path="/approve"
+              element={isLoggedIn && (userRole === '承認者' || userRole === '管理者') ? <ApprovalPage /> : <Navigate to="/application/list" />}
+            />
+            <Route
+              path="/manage"
+              element={isLoggedIn && userRole === '管理者' ? <ManagementPage handleLogout={handleLogout} /> : <Navigate to="/application/list" />}
+            />
+          </Routes>
         </Box>
       </Box>
     </Router>

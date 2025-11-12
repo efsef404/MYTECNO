@@ -1,14 +1,12 @@
 import {
   Drawer, List, ListItem, ListItemIcon, ListItemText,
-  Toolbar, Box, IconButton, Divider, Typography
+  Toolbar, Box, Divider
 } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import EditIcon from '@mui/icons-material/Edit';
 import GroupIcon from '@mui/icons-material/Group';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { Link } from 'react-router-dom';
 
 const drawerWidth = 220;
@@ -18,14 +16,12 @@ interface SidebarProps {
   isLoggedIn: boolean;
   userRole: string | null;
   open: boolean;
-  onToggle: () => void;
 }
 
 function Sidebar({
   isLoggedIn,
   userRole,
   open,
-  onToggle
 }: SidebarProps) {
   return (
     <Drawer
@@ -47,26 +43,6 @@ function Sidebar({
       variant="permanent"
       anchor="left"
     >
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 1 }}>
-        {open && (
-          <Typography variant="subtitle1" sx={{ mr: 1, fontWeight: 'bold' }}>
-            メニュー
-          </Typography>
-        )}
-        <IconButton 
-          onClick={onToggle} 
-          size="small"
-          sx={{
-            backgroundColor: 'rgba(0, 0, 0, 0.04)',
-            '&:hover': {
-              backgroundColor: 'rgba(0, 0, 0, 0.08)',
-            },
-          }}
-        >
-          {open ? <ChevronLeftIcon /> : <ChevronRightIcon />}
-        </IconButton>
-      </Box>
-      <Divider />
       <Box sx={{ overflow: 'auto', pt: 1 }}>
         <List sx={{ py: 0 }}>
           {isLoggedIn && (

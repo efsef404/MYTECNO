@@ -32,9 +32,12 @@ interface HeaderProps {
   username: string | null;
   departmentName: string | null;
   handleLogout: () => void;
+  open: boolean;
+  onToggle: () => void;
+  drawerWidth: number;
 }
 
-function Header({ username, departmentName, handleLogout }: HeaderProps) {
+function Header({ username, departmentName, handleLogout, open, onToggle, drawerWidth }: HeaderProps) {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const [notificationAnchorEl, setNotificationAnchorEl] = React.useState<null | HTMLElement>(null);
   const [unreadCount, setUnreadCount] = React.useState(0);
@@ -207,7 +210,16 @@ function Header({ username, departmentName, handleLogout }: HeaderProps) {
         zIndex: (theme) => theme.zIndex.drawer + 1,
       }}
     >
-      <Toolbar sx={{ minHeight: '56px !important', py: 0.5, pl: 2 }}>
+      <Toolbar sx={{ minHeight: '56px !important', py: 0.5, pl: 1 }}>
+        <IconButton
+          color="inherit"
+          aria-label="open drawer"
+          onClick={onToggle}
+          edge="start"
+          sx={{ mr: 2 }}
+        >
+          <MenuIcon />
+        </IconButton>
         <Typography
           variant="h6"
           noWrap
