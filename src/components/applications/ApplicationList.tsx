@@ -28,7 +28,12 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import 'dayjs/locale/ja';
 import type { ApplicationData } from '../../types/ApplicationData';
+
+dayjs.extend(relativeTime);
+dayjs.locale('ja');
 
 interface ApplicationListProps {
   title: string;
@@ -123,7 +128,7 @@ const getStatusChipProps = (status: string) => {
 };
 // --------------------------------------------------------------------
 
-type SortField = 'date' | 'name' | 'status';
+type SortField = 'date' | 'name' | 'status' | 'applicationDate';
 type SortOrder = 'asc' | 'desc';
 
 function ApplicationList({ title, applications, updateApplicationStatus, selectedTab, showPagination = true }: ApplicationListProps) {
@@ -182,6 +187,9 @@ function ApplicationList({ title, applications, updateApplicationStatus, selecte
       switch (sortField) {
         case 'date':
           comparison = dayjs(a.requestedDate).valueOf() - dayjs(b.requestedDate).valueOf();
+          break;
+        case 'applicationDate':
+          comparison = dayjs(a.applicationDate).valueOf() - dayjs(b.applicationDate).valueOf();
           break;
         case 'name':
           comparison = a.username.localeCompare(b.username);
@@ -304,7 +312,7 @@ function ApplicationList({ title, applications, updateApplicationStatus, selecte
                 mb: 0.5
               }}
             >
-              <Box sx={{ flex: 1, minWidth: 0, pl: 1 }}> {/* 特認 */}
+              <Box sx={{ flex: 0.5, minWidth: 0, pl: 1 }}> {/* 特認 */}
                 <Typography variant="caption" sx={{ fontSize: '0.7rem', fontWeight: 600, color: 'text.secondary' }}>
                   特認
                 </Typography>
@@ -322,6 +330,20 @@ function ApplicationList({ title, applications, updateApplicationStatus, selecte
                 <Typography variant="caption" sx={{ fontSize: '0.7rem', fontWeight: 600, color: 'text.secondary', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
                   勤務日
                   <SortIcon field="date" />
+                </Typography>
+              </Box>
+              <Box 
+                sx={{ 
+                  flex: 1, 
+                  minWidth: 0,
+                  cursor: 'pointer',
+                  '&:hover': { color: 'primary.main' }
+                }}
+                onClick={() => handleSort('applicationDate')}
+              >
+                <Typography variant="caption" sx={{ fontSize: '0.7rem', fontWeight: 600, color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  申請時間
+                  <SortIcon field="applicationDate" />
                 </Typography>
               </Box>
               <Box 
@@ -386,7 +408,7 @@ function ApplicationList({ title, applications, updateApplicationStatus, selecte
                 onClick={() => handleToggleExpand(app.id)}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Box sx={{ flex: 1, minWidth: 0, pl: 1 }}> {/* 特認 */}
+                  <Box sx={{ flex: 0.5, minWidth: 0, pl: 1 }}> {/* 特認 */}
                     {app.isSpecialApproval ? (
                       <FiberManualRecordIcon sx={{ color: 'error.main', fontSize: '0.8rem' }} />
                     ) : null}
@@ -408,6 +430,13 @@ function ApplicationList({ title, applications, updateApplicationStatus, selecte
                         ({dayjs(app.requestedDate).format('ddd')})
                       </Typography>
                     </Box>
+                  </Box>
+
+                  {/* 申請時間 */}
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                      {dayjs(app.applicationDate).fromNow()}
+                    </Typography>
                   </Box>
                   
                   {/* 申請者名（コンパクト） */}
