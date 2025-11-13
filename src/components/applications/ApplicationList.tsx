@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
@@ -21,6 +21,7 @@ import {
   Select,
   MenuItem,
   InputLabel,
+  Pagination,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
@@ -34,6 +35,7 @@ interface ApplicationListProps {
   applications: ApplicationData[];
   updateApplicationStatus?: (id: number, newStatus: ApplicationData['status'], denialReason?: string) => void;
   selectedTab?: 'pending' | 'processed';
+  showPagination?: boolean; // ページネーションを表示するかどうかのフラグ
 }
 
 interface ConfirmModalProps {
@@ -124,12 +126,15 @@ const getStatusChipProps = (status: string) => {
 type SortField = 'date' | 'name' | 'status';
 type SortOrder = 'asc' | 'desc';
 
-function ApplicationList({ title, applications, updateApplicationStatus, selectedTab }: ApplicationListProps) {
+function ApplicationList({ title, applications, updateApplicationStatus, selectedTab, showPagination = true }: ApplicationListProps) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [filterSpecialApproval, setFilterSpecialApproval] = useState<'all' | 'special' | 'normal'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | '申請中' | '承認' | '否認'>('all');
+  const [page, setPage] = useState(1);
+  const rowsPerPage = 10;
+
   const [confirmModal, setConfirmModal] = useState<{
     open: boolean;
     action: '承認' | '否認';
@@ -139,6 +144,12 @@ function ApplicationList({ title, applications, updateApplicationStatus, selecte
     action: '承認',
     applicationId: null,
   });
+
+  // フィルターやソート条件が変更されたら、ページを1に戻す
+  useEffect(() => {
+    setPage(1);
+  }, [filterSpecialApproval, filterStatus, sortField, sortOrder, applications]);
+
 
   const handleToggleExpand = (id: number) => {
     setExpandedId(expandedId === id ? null : id);
@@ -183,6 +194,17 @@ function ApplicationList({ title, applications, updateApplicationStatus, selecte
       
       return sortOrder === 'asc' ? comparison : -comparison;
     });
+
+  // ページネーションを適用
+  const paginatedApplications = showPagination
+    ? filteredAndSortedApplications.slice((page - 1) * rowsPerPage, page * rowsPerPage)
+    : filteredAndSortedApplications;
+  
+  const pageCount = showPagination ? Math.ceil(filteredAndSortedApplications.length / rowsPerPage) : 1;
+
+  const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
+    setPage(value);
+  };
 
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) return null;
@@ -261,7 +283,7 @@ function ApplicationList({ title, applications, updateApplicationStatus, selecte
           gap: 0.5,
         }}
       >
-        {filteredAndSortedApplications.length === 0 ? (
+        {paginatedApplications.length === 0 ? (
           <Box sx={{ textAlign: 'center', py: 4 }}>
             <Typography variant="body1" color="text.secondary">
               {applications.length === 0 ? '表示する申請がありません。' : '条件に一致する申請がありません。'}
@@ -338,7 +360,7 @@ function ApplicationList({ title, applications, updateApplicationStatus, selecte
             </Box>
 
             {/* データ行 */}
-            {filteredAndSortedApplications.map((app) => (
+            {paginatedApplications.map((app) => (
             <Card
               key={app.id}
               sx={{
@@ -541,6 +563,18 @@ function ApplicationList({ title, applications, updateApplicationStatus, selecte
           </>
         )}
       </Box>
+
+      {/* ページネーション */}
+      {showPagination && pageCount > 1 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+          <Pagination
+            count={pageCount}
+            page={page}
+            onChange={handlePageChange}
+            color="primary"
+          />
+        </Box>
+      )}
 
 
       {/* 承認/否認確認モーダル */}
