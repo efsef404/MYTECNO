@@ -155,7 +155,7 @@ app.get('/api/applications/my', authenticateToken, async (req: AuthRequest, res:
 
 // 新しい申請を作成
 app.post('/api/applications', authenticateToken, async (req: AuthRequest, res: Response) => {
-  const { applicationDate, requestedDate, reason, isSpecialApproval, startTime, endTime } = req.body;
+  const { applicationDate, requestedDate, reason, isSpecialApproval, startTime, endTime, isPartialWorkFromHome, isOvertimeApproval } = req.body;
   const userId = req.user?.id;
 
   if (!applicationDate || !requestedDate || !reason) {
@@ -166,11 +166,11 @@ app.post('/api/applications', authenticateToken, async (req: AuthRequest, res: R
   try {
     connection = await mysql.createConnection(dbConfig);
     const pendingStatusId = 1;
-    const query = 'INSERT INTO applications (user_id, application_date, requested_date, reason, status_id, is_special_approval, start_time, end_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
-    const [result]:[any, any] = await connection.execute(query, [userId, applicationDate, requestedDate, reason, pendingStatusId, isSpecialApproval, startTime, endTime]);
+    const query = 'INSERT INTO applications (user_id, application_date, requested_date, reason, status_id, is_special_approval, start_time, end_time, is_partial_work_from_home, is_overtime_approval) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+    const [result]:[any, any] = await connection.execute(query, [userId, applicationDate, requestedDate, reason, pendingStatusId, isSpecialApproval, startTime, endTime, isPartialWorkFromHome, isOvertimeApproval]);
 
     const newApplicationId = result.insertId;
-    const [rows]:[any[], any] = await connection.execute('SELECT id, user_id, application_date, requested_date, reason, status_id, is_special_approval, start_time, end_time FROM applications WHERE id = ?', [newApplicationId]);
+    const [rows]:[any[], any] = await connection.execute('SELECT id, user_id, application_date, requested_date, reason, status_id, is_special_approval, start_time, end_time, is_partial_work_from_home, is_overtime_approval FROM applications WHERE id = ?', [newApplicationId]);
 
     await connection.end();
     res.status(201).json(rows[0]);
@@ -333,10 +333,12 @@ app.put('/api/applications/:id/status', [authenticateToken, approverOrAdminOnly]
 
     // ステータスが「承認」の場合、ユーザーの在宅勤務回数をインクリメント
     if (newStatus === '承認') {
-      const [appRows]: [any[], any] = await connection.execute('SELECT user_id FROM applications WHERE id = ?', [id]);
+      // 申請が部分在宅勤務か確認
+      const [appRows]: [any[], any] = await connection.execute('SELECT user_id, is_partial_work_from_home FROM applications WHERE id = ?', [id]);
       if (appRows.length > 0) {
-        const userId = appRows[0].user_id;
-        await connection.execute('UPDATE users SET remote_work_count = remote_work_count + 1 WHERE id = ?', [userId]);
+        const { user_id: userId, is_partial_work_from_home: isPartial } = appRows[0];
+        const incrementValue = isPartial ? 0.5 : 1;
+        await connection.execute('UPDATE users SET remote_work_count = remote_work_count + ? WHERE id = ?', [incrementValue, userId]);
       }
     }
 

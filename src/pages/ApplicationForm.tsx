@@ -10,6 +10,8 @@ export default function ApplicationForm() {
   const [isSpecialApproval, setIsSpecialApproval] = useState(false);
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('18:00');
+  const [isPartialWorkFromHome, setIsPartialWorkFromHome] = useState(false);
+  const [isOvertimeApproval, setIsOvertimeApproval] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -31,6 +33,15 @@ export default function ApplicationForm() {
       return;
     }
 
+    const start = dayjs(`2000-01-01 ${startTime}`);
+    const end = dayjs(`2000-01-01 ${endTime}`);
+    const durationHours = end.diff(start, 'hour');
+
+    if (durationHours > 8 && !isOvertimeApproval) {
+      setError('勤務時間が8時間を超える場合、上限超過チェックボックスにチェックを入れてください。');
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
       const applicationDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
@@ -46,8 +57,10 @@ export default function ApplicationForm() {
           applicationDate,
           requestedDate: requestedDate.format('YYYY-MM-DD'),
           isSpecialApproval,
+          isPartialWorkFromHome,
           startTime,
-          endTime
+          endTime,
+          isOvertimeApproval,
         }),
       });
 
@@ -60,6 +73,8 @@ export default function ApplicationForm() {
       setReason('');
       setRequestedDate(dayjs());
       setIsSpecialApproval(false);
+      setIsPartialWorkFromHome(false);
+      setIsOvertimeApproval(false);
     } catch (err: any) {
       setError(err.message);
     }
@@ -139,6 +154,32 @@ export default function ApplicationForm() {
                   sx={{ flex: 1, minWidth: '150px' }}
                 />
               </Box>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={isPartialWorkFromHome}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      setIsPartialWorkFromHome(e.target.checked);
+                    }}
+                    name="isPartialWorkFromHome"
+                    color="primary"
+                  />
+                }
+                label="部分在宅勤務"
+                sx={{ mt: 1 }}
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={isOvertimeApproval}
+                    onChange={(e) => setIsOvertimeApproval(e.target.checked)}
+                    name="isOvertimeApproval"
+                    color="primary"
+                  />
+                }
+                label="上限超過"
+                sx={{ mt: 1 }}
+              />
             </Box>
 
             <Divider />
