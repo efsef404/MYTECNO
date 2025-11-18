@@ -20,6 +20,50 @@ const dbConfig = {
   database: process.env.DB_DATABASE,
 };
 
+// 通知テーブルと否認理由カラムを追加する初期化関数
+const initializeDatabase = async () => {
+  let connection;
+  try {
+    connection = await mysql.createConnection(dbConfig);
+    
+    // 通知テーブルを作成
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        application_id INT,
+        message TEXT NOT NULL,
+        type ENUM('approval', 'denial', 'update') NOT NULL,
+        is_read BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (application_id) REFERENCES applications(id)
+      )
+    `);
+    
+    // 申請テーブルに否認理由カラムを追加（まだ存在しない場合）
+    try {
+      await connection.execute(`
+        ALTER TABLE applications 
+        ADD COLUMN denial_reason TEXT 
+        AFTER reason
+      `);
+    } catch (error) {
+      // カラムが既に存在する場合はエラーを無視
+      console.log('否認理由カラムは既に存在するか、追加に失敗しました');
+    }
+    
+    await connection.end();
+    console.log('データベースの初期化が完了しました');
+  } catch (error) {
+    console.error('データベース初期化エラー:', error);
+    if (connection) await connection.end();
+  }
+};
+
+// アプリ起動時にデータベースを初期化
+initializeDatabase();
+
 // ログインAPIエンドポイント
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
@@ -121,7 +165,7 @@ app.get('/api/applications/my', authenticateToken, async (req: AuthRequest, res:
 
     // データ取得クエリ
     const dataQuery = `
-      SELECT a.id, u.username, u.department_id, d.name as departmentName, a.application_date as applicationDate, a.requested_date as requestedDate, a.reason, s.name as status,
+      SELECT a.id, u.username, u.department_id, d.name as departmentName, a.application_date as applicationDate, a.requested_date as requestedDate, a.reason, a.denial_reason as denialReason, s.name as status,
              a.processed_at as processedAt, approver.username as approverUsername, approver_department.name as approverDepartmentName, a.is_special_approval as isSpecialApproval, a.start_time as startTime, a.end_time as endTime
       FROM applications a
       JOIN application_statuses s ON a.status_id = s.id
@@ -207,7 +251,7 @@ app.get('/api/admin/applications', [authenticateToken, adminOnly], async (req: A
 
     // データ取得クエリ (LIMITとOFFSET、WHERE句を追加)
     const dataQuery = `
-      SELECT a.id, u.username, u.department_id, d.name as departmentName, a.application_date as applicationDate, a.requested_date as requestedDate, a.reason, s.name as status,
+      SELECT a.id, u.username, u.department_id, d.name as departmentName, a.application_date as applicationDate, a.requested_date as requestedDate, a.reason, a.denial_reason as denialReason, s.name as status,
              a.processed_at as processedAt, approver.username as approverUsername, approver_department.name as approverDepartmentName, a.is_special_approval as isSpecialApproval, a.start_time as startTime, a.end_time as endTime
       FROM applications a
       JOIN application_statuses s ON a.status_id = s.id
@@ -267,7 +311,7 @@ app.get('/api/approver/applications', [authenticateToken, approverOrAdminOnly], 
 
     // データ取得クエリ
     const dataQuery = `
-      SELECT a.id, u.username, u.department_id, d.name as departmentName, a.application_date as applicationDate, a.requested_date as requestedDate, a.reason, s.name as status,
+      SELECT a.id, u.username, u.department_id, d.name as departmentName, a.application_date as applicationDate, a.requested_date as requestedDate, a.reason, a.denial_reason as denialReason, s.name as status,
              a.processed_at as processedAt, approver.username as approverUsername, approver_department.name as approverDepartmentName, a.is_special_approval as isSpecialApproval, a.start_time as startTime, a.end_time as endTime
       FROM applications a
       JOIN application_statuses s ON a.status_id = s.id
@@ -300,14 +344,41 @@ app.get('/api/approver/applications', [authenticateToken, approverOrAdminOnly], 
   }
 });
 
+// すべてのリクエストをログに記録
+app.use((req, _res, next) => {
+  console.log(`${req.method} ${req.url}`, req.body);
+  next();
+});
+
 // 申請のステータスを更新 (管理者専用)
 app.put('/api/applications/:id/status', [authenticateToken, approverOrAdminOnly], async (req: AuthRequest, res: Response) => {
   const { id } = req.params; // URLパラメータから申請IDを取得
-  const { newStatus } = req.body; // リクエストボディから新しいステータス名を取得
+  const { newStatus, denialReason } = req.body; // リクエストボディから新しいステータス名と否認理由を取得
   const approverId = req.user?.id; // 承認者のID
 
+  console.log('申請ステータス更新リクエスト:', { 
+    id, 
+    newStatus, 
+    denialReason, 
+    approverId,
+    requestBody: req.body,
+    headers: req.headers
+  });
+
   if (!newStatus || !id) {
+    console.log('エラー: 申請IDと新しいステータスは必須です', { 
+      newStatus, 
+      id, 
+      newStatusType: typeof newStatus, 
+      idType: typeof id 
+    });
     return res.status(400).json({ message: '申請IDと新しいステータスは必須です。' });
+  }
+
+  // 否認する場合は理由が必須
+  if (newStatus === '否認' && !denialReason) {
+    console.log('エラー: 否認する場合は理由が必須です');
+    return res.status(400).json({ message: '否認する場合は理由を入力してください。' });
   }
 
   let connection;
@@ -323,14 +394,22 @@ app.put('/api/applications/:id/status', [authenticateToken, approverOrAdminOnly]
     const newStatusId = statusRows[0].id;
 
     // 申請のステータスを更新
-    const query = 'UPDATE applications SET status_id = ?, approver_id = ?, processed_at = NOW() WHERE id = ?';
-    const [result]: [any, any] = await connection.execute(query, [newStatusId, approverId, id]);
+    const updateQuery = newStatus === '否認' 
+      ? 'UPDATE applications SET status_id = ?, approver_id = ?, processed_at = NOW(), denial_reason = ? WHERE id = ?'
+      : 'UPDATE applications SET status_id = ?, approver_id = ?, processed_at = NOW() WHERE id = ?';
+    
+    const updateParams = newStatus === '否認' 
+      ? [newStatusId, approverId, denialReason, id]
+      : [newStatusId, approverId, id];
+    
+    const [result]: [any, any] = await connection.execute(updateQuery, updateParams);
 
     if (result.affectedRows === 0) {
       await connection.end();
       return res.status(404).json({ message: '指定された申請が見つかりません。' });
     }
 
+<<<<<<< HEAD
     // ステータスが「承認」の場合、ユーザーの在宅勤務回数をインクリメント
     if (newStatus === '承認') {
       // 申請が部分在宅勤務か確認
@@ -339,12 +418,51 @@ app.put('/api/applications/:id/status', [authenticateToken, approverOrAdminOnly]
         const { user_id: userId, is_partial_work_from_home: isPartial } = appRows[0];
         const incrementValue = isPartial ? 0.5 : 1;
         await connection.execute('UPDATE users SET remote_work_count = remote_work_count + ? WHERE id = ?', [incrementValue, userId]);
+=======
+    // 申請者情報と申請日を取得して通知を作成
+    const [appRows]: [any[], any] = await connection.execute(
+      'SELECT user_id, requested_date, denial_reason FROM applications WHERE id = ?', 
+      [id]
+    );
+    if (appRows.length > 0) {
+      const userId = appRows[0].user_id;
+      const requestedDate = appRows[0].requested_date;
+      const denialReasonFromDb = appRows[0].denial_reason;
+      
+      let notificationMessage = '';
+      let notificationType = '';
+      
+      // 日付をフォーマット（YYYY年MM月DD日形式）
+      const formattedDate = new Date(requestedDate).toLocaleDateString('ja-JP', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      
+      if (newStatus === '承認') {
+        notificationMessage = `${formattedDate}の在宅勤務申請が承認されました。`;
+        notificationType = 'approval';
+        // ユーザーの在宅勤務回数をインクリメント
+        await connection.execute('UPDATE users SET remote_work_count = remote_work_count + 1 WHERE id = ?', [userId]);
+      } else if (newStatus === '否認') {
+        const reason = denialReasonFromDb || denialReason || '理由なし';
+        notificationMessage = `${formattedDate}の在宅勤務申請が否認されました。理由: ${reason}`;
+        notificationType = 'denial';
+      }
+      
+      // 通知を作成
+      if (notificationMessage) {
+        await connection.execute(
+          'INSERT INTO notifications (user_id, application_id, message, type) VALUES (?, ?, ?, ?)',
+          [userId, id, notificationMessage, notificationType]
+        );
+>>>>>>> 4cd658e31ddc7a38544536989674a8403f504301
       }
     }
 
     // 更新された申請データを取得して返す
     const [updatedRows]: [any[], any] = await connection.execute(
-      `SELECT a.id, u.username, u.department_id, d.name as departmentName, a.application_date as applicationDate, a.requested_date as requestedDate, a.reason, s.name as status,
+      `SELECT a.id, u.username, u.department_id, d.name as departmentName, a.application_date as applicationDate, a.requested_date as requestedDate, a.reason, a.denial_reason as denialReason, s.name as status,
               a.processed_at as processedAt, approver.username as approverUsername, approver_department.name as approverDepartmentName, a.is_special_approval as isSpecialApproval, a.start_time as startTime, a.end_time as endTime
        FROM applications a
        JOIN application_statuses s ON a.status_id = s.id
@@ -363,6 +481,96 @@ app.put('/api/applications/:id/status', [authenticateToken, approverOrAdminOnly]
     console.error('Update Application Status API Error:', error);
     if (connection) await connection.end();
     res.status(500).json({ message: '申請ステータスの更新に失敗しました。' });
+  }
+});
+
+// 通知を取得するAPIエンドポイント
+app.get('/api/notifications', authenticateToken, async (req: AuthRequest, res: Response) => {
+  const userId = req.user?.id;
+  
+  if (!userId) {
+    return res.status(401).json({ message: 'ユーザーIDが見つかりません。' });
+  }
+
+  let connection;
+  try {
+    connection = await mysql.createConnection(dbConfig);
+    
+    const [notifications]: [any[], any] = await connection.execute(
+      `SELECT 
+        n.id as id,
+        n.application_id as application_id,
+        n.message as message,
+        n.type as type,
+        n.is_read as is_read,
+        n.created_at as created_at,
+        a.requested_date as requested_date
+       FROM notifications n
+       LEFT JOIN applications a ON n.application_id = a.id
+       WHERE n.user_id = ?
+       ORDER BY n.created_at DESC
+       LIMIT 50`,
+      [userId]
+    );
+
+    // 未読通知数を取得
+    const [unreadCount]: [any[], any] = await connection.execute(
+      'SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = FALSE',
+      [userId]
+    );
+
+    await connection.end();
+    
+    // デバッグ: 通知データをログ出力
+    console.log('通知データをクライアントに送信:', JSON.stringify(notifications.slice(0, 3), null, 2));
+    
+    // キャッシュ制御ヘッダーを設定
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
+    res.json({
+      notifications,
+      unreadCount: unreadCount[0].count
+    });
+
+  } catch (error) {
+    console.error('Get Notifications API Error:', error);
+    if (connection) await connection.end();
+    res.status(500).json({ message: '通知の取得に失敗しました。' });
+  }
+});
+
+// 通知を既読にするAPIエンドポイント
+app.put('/api/notifications/:id/read', authenticateToken, async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const userId = req.user?.id;
+
+  if (!id) {
+    return res.status(400).json({ message: '通知IDは必須です。' });
+  }
+
+  let connection;
+  try {
+    connection = await mysql.createConnection(dbConfig);
+    
+    const [result]: [any, any] = await connection.execute(
+      'UPDATE notifications SET is_read = TRUE WHERE id = ? AND user_id = ?',
+      [id, userId]
+    );
+
+    if (result.affectedRows === 0) {
+      await connection.end();
+      return res.status(404).json({ message: '通知が見つからないか、アクセス権限がありません。' });
+    }
+
+    await connection.end();
+    res.json({ message: '通知を既読にしました。' });
+
+  } catch (error) {
+    console.error('Mark Notification as Read API Error:', error);
+    if (connection) await connection.end();
+    res.status(500).json({ message: '通知の既読処理に失敗しました。' });
   }
 });
 
@@ -532,6 +740,48 @@ app.get('/api/user/stats', authenticateToken, async (req: AuthRequest, res: Resp
     console.error('Get User Stats API Error:', error);
     if (connection) await connection.end();
     res.status(500).json({ message: 'ユーザー統計の取得に失敗しました。' });
+  }
+});
+
+// 個別申請詳細を取得
+app.get('/api/applications/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const userId = req.user?.id;
+
+  if (!id) {
+    return res.status(400).json({ message: '申請IDは必須です。' });
+  }
+
+  let connection;
+  try {
+    connection = await mysql.createConnection(dbConfig);
+
+    const query = `
+      SELECT a.id, u.username, u.department_id, d.name as departmentName, a.application_date as applicationDate, a.requested_date as requestedDate, a.reason, a.denial_reason as denialReason, s.name as status,
+             a.processed_at as processedAt, approver.username as approverUsername, approver_department.name as approverDepartmentName, a.is_special_approval as isSpecialApproval, a.start_time as startTime, a.end_time as endTime
+      FROM applications a
+      JOIN application_statuses s ON a.status_id = s.id
+      JOIN users u ON a.user_id = u.id
+      LEFT JOIN users approver ON a.approver_id = approver.id
+      LEFT JOIN departments d ON u.department_id = d.id
+      LEFT JOIN departments approver_department ON approver.department_id = approver_department.id
+      WHERE a.id = ? AND a.user_id = ?
+    `;
+    
+    const [applications]: [any[], any] = await connection.execute(query, [id, userId]);
+
+    if (applications.length === 0) {
+      await connection.end();
+      return res.status(404).json({ message: '申請が見つからないか、アクセス権限がありません。' });
+    }
+
+    await connection.end();
+    res.json(applications[0]);
+
+  } catch (error) {
+    console.error('Get Application Detail API Error:', error);
+    if (connection) await connection.end();
+    res.status(500).json({ message: '申請詳細の取得に失敗しました。' });
   }
 });
 

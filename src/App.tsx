@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Container } from '@mui/material';
+import { useState, useEffect } from 'react';
+import { Box } from '@mui/material';
 import Sidebar from './components/Sidebar';
+import Header from './components/Header';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 
@@ -21,15 +22,16 @@ interface DecodedToken {
   exp: number;
 }
 
-const drawerWidth = 240;
-const miniDrawerWidth = 60;
-
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [departmentName, setDepartmentName] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const handleSidebarToggle = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -73,83 +75,69 @@ function App() {
     setDepartmentName(null);
   };
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
+  const drawerWidth = 220;
+  const drawerWidthClosed = 60;
 
   return (
     <Router>
-      <Box sx={{ display: 'flex' }}>
+      <Box>
+        {isLoggedIn && (
+          <Header
+            username={username}
+            departmentName={departmentName}
+            handleLogout={handleLogout}
+            open={sidebarOpen}
+            onToggle={handleSidebarToggle}
+            drawerWidth={drawerWidth}
+          />
+        )}
         {isLoggedIn && (
           <Sidebar
             isLoggedIn={isLoggedIn}
-            handleLogout={handleLogout}
             userRole={userRole}
-            username={username}
-            departmentName={departmentName}
-            sidebarOpen={sidebarOpen}
-            toggleSidebar={toggleSidebar}
+            open={sidebarOpen}
           />
         )}
         <Box
           component="main"
           sx={{
             flexGrow: 1,
-            ml: isLoggedIn
-              ? (sidebarOpen ? `${drawerWidth}px` : `${miniDrawerWidth}px`)
-              : 0,
-            transition: (theme) => theme.transitions.create(['margin'], {
+            mt: isLoggedIn ? '56px' : 0,
+            ml: isLoggedIn ? `${sidebarOpen ? drawerWidth : drawerWidthClosed}px` : 0,
+            minHeight: '100vh',
+            p: 2,
+            transition: (theme) => theme.transitions.create('margin', {
               easing: theme.transitions.easing.sharp,
               duration: theme.transitions.duration.enteringScreen,
             }),
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            minHeight: '100vh',
           }}
         >
-          <Container maxWidth="lg" sx={{ mt: 4, p: 3, width: '100%' }}>
-            <Box sx={{
-              background: 'rgba(255, 255, 255, 0.8)', // Lighter transparent background for light mode
-              borderRadius: '16px',
-              boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.8)', // Lighter border
-              padding: '20px',
-              margin: '20px',
-              maxWidth: '90%',
-              maxHeight: '90%',
-              overflowY: 'auto',
-            }}>
-              <Routes>
-                <Route
-                  path="/"
-                  element={!isLoggedIn ? <LoginPage handleLogin={handleLogin} /> : <Navigate to="/home" />}
-                />
-                <Route
-                  path="/home"
-                  element={isLoggedIn ? <HomePage /> : <Navigate to="/" />}
-                />
-                <Route
-                  path="/application/new"
-                  element={isLoggedIn ? <ApplicationForm /> : <Navigate to="/" />}
-                />
-                <Route
-                  path="/application/list"
-                  element={isLoggedIn ? <ApplicationList /> : <Navigate to="/" />}
-                />
-                <Route
-                  path="/approve"
-                  element={isLoggedIn && (userRole === '承認者' || userRole === '管理者') ? <ApprovalPage /> : <Navigate to="/application/list" />}
-                />
-                <Route
-                  path="/manage"
-                  element={isLoggedIn && userRole === '管理者' ? <ManagementPage handleLogout={handleLogout} /> : <Navigate to="/application/list" />}
-                />
-              </Routes>
-            </Box>
-          </Container>
+          <Routes>
+            <Route
+              path="/"
+              element={!isLoggedIn ? <LoginPage handleLogin={handleLogin} /> : <Navigate to="/home" />}
+            />
+            <Route
+              path="/home"
+              element={isLoggedIn ? <HomePage /> : <Navigate to="/" />}
+            />
+            <Route
+              path="/application/new"
+              element={isLoggedIn ? <ApplicationForm /> : <Navigate to="/" />}
+            />
+            <Route
+              path="/application/list"
+              element={isLoggedIn ? <ApplicationList /> : <Navigate to="/" />}
+            />
+            <Route
+              path="/approve"
+              element={isLoggedIn && (userRole === '承認者' || userRole === '管理者') ? <ApprovalPage /> : <Navigate to="/application/list" />}
+            />
+            <Route
+              path="/manage"
+              element={isLoggedIn && userRole === '管理者' ? <ManagementPage handleLogout={handleLogout} /> : <Navigate to="/application/list" />}
+            />
+          </Routes>
         </Box>
       </Box>
     </Router>

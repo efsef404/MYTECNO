@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Box, Typography, Pagination, Tabs, Tab, Paper, Alert } from '@mui/material';
+import { Box, Typography, Tabs, Tab, Paper, Alert, Badge } from '@mui/material';
 import { HourglassEmpty, CheckCircle } from '@mui/icons-material';
 import ApplicationList from '../components/applications/ApplicationList';
 import type { ApplicationData } from '../types/ApplicationData'; // 型定義をインポート
@@ -18,15 +18,12 @@ interface DecodedToken {
 function ApprovalPage() {
   const [applications, setApplications] = useState<ApplicationData[]>([]);
   const [error, setError] = useState('');
-  const [page, setPage] = useState(1); // 現在のページ
-  const [totalCount, setTotalCount] = useState(0); // 総件数
-  const limit = 10; // 1ページあたりの表示件数
-
+  
   // タブ選択用のステート
   const [selectedTab, setSelectedTab] = useState<'pending' | 'processed'>('pending'); // 'pending' (申請中) または 'processed' (承認済み/否認)
 
   // APIから申請一覧を取得する関数
-  const fetchApplications = async (fetchPage: number, statusFilter?: 'pending' | 'processed') => {
+  const fetchApplications = async (statusFilter?: 'pending' | 'processed') => {
     setError('');
     try {
       const token = localStorage.getItem('token');
@@ -37,13 +34,12 @@ function ApprovalPage() {
       const decodedToken: DecodedToken = jwtDecode(token);
       const currentUsername = decodedToken.username;
 
-      let apiUrl = `http://localhost:3001/api/approver/applications?page=${fetchPage}&limit=${limit}`;
+      // 全データを取得
+      let apiUrl = `http://localhost:3001/api/approver/applications?limit=1000`;
       if (statusFilter === 'pending') {
         apiUrl += '&status=pending';
       } else if (statusFilter === 'processed') {
         apiUrl += '&status=processed';
-      } else if (statusFilter === 'all') {
-        // 'all' の場合はフィルタリングしない
       }
 
       const response = await fetch(apiUrl, {
@@ -56,7 +52,7 @@ function ApprovalPage() {
         throw new Error('申請一覧の取得に失敗しました。');
       }
 
-      const { applications: fetchedApplications, totalCount: fetchedTotalCount } = await response.json();
+      const { applications: fetchedApplications } = await response.json();
       
       // 自分の申請を除外する
       const filteredApplications = fetchedApplications.filter(
@@ -71,45 +67,45 @@ function ApprovalPage() {
         processedAt: app.processedAt ? dayjs(app.processedAt).format('YYYY/MM/DD HH:mm') : null,
       }));
       setApplications(formattedData);
-      setTotalCount(fetchedTotalCount);
 
     } catch (err: any) {
       setError(err.message);
     }
   };
 
-  // ページ変更ハンドラ
-  const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
-    setPage(value);
-  };
-
-  // コンポーネントのマウント時とページ変更時、タブ変更時に申請一覧を取得
+  // コンポーネントのマウント時とタブ変更時に申請一覧を取得
   useEffect(() => {
-    fetchApplications(page, selectedTab);
-  }, [page, selectedTab]); // pageまたはselectedTabが変更されたら再取得
-
-  const pageCount = Math.ceil(totalCount / limit);
+    fetchApplications(selectedTab);
+  }, [selectedTab]);
 
   // 申請ステータスを更新する関数
-  const updateApplicationStatus = async (id: number, newStatus: ApplicationData['status']) => {
+  const updateApplicationStatus = async (id: number, newStatus: ApplicationData['status'], denialReason?: string) => {
     setError('');
     try {
       const token = localStorage.getItem('token');
+      const requestBody: { newStatus: string; denialReason?: string } = { newStatus };
+      
+      // 否認の場合は理由を追加
+      if (newStatus === '否認' && denialReason) {
+        requestBody.denialReason = denialReason;
+      }
+      
       const response = await fetch(`http://localhost:3001/api/applications/${id}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ newStatus }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
-        throw new Error('申請ステータスの更新に失敗しました。');
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        throw new Error(`申請ステータスの更新に失敗しました。 Status: ${response.status}, Message: ${errorData.message}`);
       }
 
       // 成功したら申請一覧を再取得して画面を更新
-      fetchApplications(page, selectedTab); // selectedTabも渡す
+      fetchApplications(selectedTab);
 
     } catch (err: any) {
       setError(err.message);
@@ -134,26 +130,40 @@ function ApprovalPage() {
           value={selectedTab} 
           onChange={(_event: React.SyntheticEvent, newValue: 'pending' | 'processed') => {
             setSelectedTab(newValue);
-            setPage(1);
           }} 
           aria-label="application status tabs"
           sx={{
             '& .MuiTab-root': {
               minHeight: 64,
               fontSize: '1rem',
+              fontWeight: 600,
             },
           }}
         >
           <Tab 
             icon={<HourglassEmpty />} 
             iconPosition="start" 
-            label="申請中" 
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                申請中
+                {selectedTab === 'pending' && applications.length > 0 && (
+                  <Badge badgeContent={applications.length} color="warning" max={99} />
+                )}
+              </Box>
+            }
             value="pending" 
           />
           <Tab 
             icon={<CheckCircle />} 
             iconPosition="start" 
-            label="承認済み / 否認" 
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                承認済み / 否認
+                {selectedTab === 'processed' && applications.length > 0 && (
+                  <Badge badgeContent={applications.length} color="default" max={99} />
+                )}
+              </Box>
+            }
             value="processed" 
           />
         </Tabs>
@@ -165,23 +175,10 @@ function ApprovalPage() {
         title={title} 
         applications={applications} 
         updateApplicationStatus={updateApplicationStatus} 
-        selectedTab={selectedTab} 
+        selectedTab={selectedTab}
+        showPagination={true}
       />
       
-      {pageCount > 1 && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3, gap: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            {totalCount > 0 ? `${(page - 1) * limit + 1} - ${Math.min(page * limit, totalCount)}` : '0'} / {totalCount}件
-          </Typography>
-          <Pagination
-            count={pageCount}
-            page={page}
-            onChange={handlePageChange}
-            color="primary"
-            size="large"
-          />
-        </Box>
-      )}
     </Box>
   );
 }
